@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { AppService } from './app.service';
 
 /**
@@ -6,6 +7,7 @@ import { AppService } from './app.service';
  * dependencies. Kept distinct from GET /health, which additionally verifies
  * database connectivity.
  */
+@ApiTags('app')
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}

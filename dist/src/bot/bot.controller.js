@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BotController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const botbuilder_1 = require("botbuilder");
 const bot_constants_1 = require("./bot.constants");
 const teams_activity_handler_1 = require("./teams-activity-handler");
@@ -38,6 +39,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], BotController.prototype, "handleMessages", null);
 exports.BotController = BotController = __decorate([
+    (0, swagger_1.ApiTags)('bot'),
     (0, common_1.Controller)('api/messages'),
     __param(0, (0, common_1.Inject)(bot_constants_1.BOT_ADAPTER)),
     __metadata("design:paramtypes", [botbuilder_1.CloudAdapter,

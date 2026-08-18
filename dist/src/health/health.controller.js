@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HealthController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const terminus_1 = require("@nestjs/terminus");
 const pg_1 = require("pg");
 const database_constants_1 = require("../database/database.constants");
@@ -50,6 +51,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], HealthController.prototype, "check", null);
 exports.HealthController = HealthController = __decorate([
+    (0, swagger_1.ApiTags)('health'),
     (0, common_1.Controller)('health'),
     __param(2, (0, common_1.Inject)(database_constants_1.PG_POOL)),
     __metadata("design:paramtypes", [terminus_1.HealthCheckService,

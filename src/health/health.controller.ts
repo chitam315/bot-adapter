@@ -1,4 +1,5 @@
 import { Controller, Get, Inject } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import {
   HealthCheck,
   HealthCheckService,
@@ -7,6 +8,7 @@ import {
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.constants';
 
+@ApiTags('health')
 @Controller('health')
 export class HealthController {
   constructor(

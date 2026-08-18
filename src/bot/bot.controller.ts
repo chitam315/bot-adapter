@@ -1,4 +1,5 @@
 import { Controller, Inject, Post, Req, Res } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { CloudAdapter } from 'botbuilder';
 import { Request, Response } from 'express';
 import { BOT_ADAPTER } from './bot.constants';
@@ -10,6 +11,7 @@ import { BotActivityHandler } from './teams-activity-handler';
  * HTTP response itself and validate the Bot Framework JWT before any
  * business logic runs.
  */
+@ApiTags('bot')
 @Controller('api/messages')
 export class BotController {
   constructor(
