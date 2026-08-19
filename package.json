@@ -21,6 +21,7 @@
     "db:pull": "drizzle-kit pull --config=drizzle.pull.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "docker:db:up": "docker compose up -d postgres",
     "docker:db:down": "docker compose down",

@@ -23,21 +23,28 @@ export class KnowledgeBaseService {
     const queryEmbedding = await this.embeddingService.embed(query);
     const similarity = sql<number>`1 - (${cosineDistance(schema.embeddings.embedding, queryEmbedding)})`;
 
+    // embeddings links to exactly one of faqs (direct) or documentPages
+    // (which in turn belongs to a document) — never both.
     const rows = await this.db
       .select({
         content: schema.embeddings.content,
-        documentId: schema.embeddings.documentId,
         faqId: schema.embeddings.faqId,
-        documentTitle: schema.document.title,
-        faqQuestion: schema.faq.question,
+        faqQuestion: schema.faqs.question,
+        documentId: schema.documents.id,
+        documentName: schema.documents.name,
+        documentPageNumber: schema.documentPages.pageNumber,
         score: similarity,
       })
       .from(schema.embeddings)
+      .leftJoin(schema.faqs, eq(schema.embeddings.faqId, schema.faqs.id))
       .leftJoin(
-        schema.document,
-        eq(schema.embeddings.documentId, schema.document.id),
+        schema.documentPages,
+        eq(schema.embeddings.documentPageId, schema.documentPages.id),
       )
-      .leftJoin(schema.faq, eq(schema.embeddings.faqId, schema.faq.id))
+      .leftJoin(
+        schema.documents,
+        eq(schema.documentPages.documentId, schema.documents.id),
+      )
       .orderBy(desc(similarity))
       .limit(limit);
 
@@ -46,10 +53,11 @@ export class KnowledgeBaseService {
 
   private toHit(row: {
     content: string;
-    documentId: string | null;
     faqId: string | null;
-    documentTitle: string | null;
     faqQuestion: string | null;
+    documentId: string | null;
+    documentName: string | null;
+    documentPageNumber: number | null;
     score: number;
   }): KnowledgeBaseHit {
     if (row.faqId) {
@@ -66,7 +74,10 @@ export class KnowledgeBaseService {
       content: row.content,
       sourceType: 'document',
       sourceId: row.documentId ?? '',
-      title: row.documentTitle,
+      title:
+        row.documentName && row.documentPageNumber != null
+          ? `${row.documentName} (page ${row.documentPageNumber})`
+          : row.documentName,
       score: row.score,
     };
   }

@@ -47,10 +47,11 @@ describe('KnowledgeBaseService', () => {
   it('maps a faq-sourced row to a KnowledgeBaseHit', async () => {
     rows.push({
       content: 'Click "forgot password" on the sign-in page.',
-      documentId: null,
       faqId: 'faq-1',
-      documentTitle: null,
       faqQuestion: 'How do I reset my password?',
+      documentId: null,
+      documentName: null,
+      documentPageNumber: null,
       score: 0.92,
     });
 
@@ -65,13 +66,14 @@ describe('KnowledgeBaseService', () => {
     });
   });
 
-  it('maps a document-sourced row to a KnowledgeBaseHit', async () => {
+  it('maps a document-sourced row to a KnowledgeBaseHit, including the page number in the title', async () => {
     rows.push({
       content: 'Section 3 covers password resets.',
-      documentId: 'doc-1',
       faqId: null,
-      documentTitle: 'Account Recovery Guide',
       faqQuestion: null,
+      documentId: 'doc-1',
+      documentName: 'Account Recovery Guide',
+      documentPageNumber: 3,
       score: 0.81,
     });
 
@@ -81,7 +83,7 @@ describe('KnowledgeBaseService', () => {
       content: 'Section 3 covers password resets.',
       sourceType: 'document',
       sourceId: 'doc-1',
-      title: 'Account Recovery Guide',
+      title: 'Account Recovery Guide (page 3)',
       score: 0.81,
     });
   });

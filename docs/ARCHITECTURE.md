@@ -35,7 +35,7 @@ HealthModule ── DatabaseModule
 | `database/` | Drizzle client, Postgres pool, table schema |
 | `health/` | `GET /health` (Terminus) |
 | `azure-openai/` | Azure OpenAI provider (Vercel AI SDK) + embedding generation |
-| `knowledge-base/` | pgvector similarity search over `embeddings`/`document`/`faq` |
+| `knowledge-base/` | pgvector similarity search over `embeddings`/`documentPages`/`documents`/`faqs` |
 | `ai/` | LLM generation orchestration; wraps knowledge-base search as a model-invoked tool |
 | `bot/` | Bot Framework adapter, Teams activity handler, `POST /api/messages` |
 
@@ -134,33 +134,38 @@ Then:
 
 ## 6. Database schema: introspect vs. hand-author
 
-The live Postgres database already has `document`, `faq`, and `embeddings`
-tables — this repo doesn't create them. The schema files in
-[src/database/schema/](../src/database/schema/) are **placeholders**, loudly
-marked as such, written so the rest of the app compiles before real DB
-credentials are available.
+[src/database/schema/schema.ts](../src/database/schema/schema.ts) is
+introspected from the real production database via `npm run db:pull` — not
+hand-authored. It mirrors the *full* database (27 tables as of the last
+pull — `users`, `chats`, `messages`, `documents`, `documentPages`, `faqs`,
+`embeddings`, and others belonging to the wider application that owns this
+database). `bot-adapter` itself only ever queries `documents`,
+`documentPages`, `faqs`, and `embeddings` (see
+[KnowledgeBaseService](../src/knowledge-base/knowledge-base.service.ts)) —
+the rest is kept for local-DB parity with production, not because this app
+reads or writes it.
 
-**Reconciling with the real database** (see
+**Re-syncing when the real schema changes** (see
 [src/database/schema/README.md](../src/database/schema/README.md) for the
 full version):
 
 ```bash
-npm run db:pull     # introspects the live DB into src/database/schema/_generated/
-# diff _generated/schema.ts against document.schema.ts / faq.schema.ts / embeddings.schema.ts
-# port the real columns in by hand, update index.ts, then delete _generated/
+DATABASE_URL="postgres://..." npm run db:pull   # introspects into src/database/schema/_generated/, never touches schema.ts directly
+# diff _generated/schema.ts against schema.ts, port over what changed
+# delete src/database/schema/_generated/ once done
 ```
 
-`db:pull` never overwrites the maintained schema files directly — it stages
-into `_generated/` so hand-added `relations()` calls, comments, or naming
-conventions aren't silently destroyed by a blind overwrite.
+`db:pull` never overwrites `schema.ts` directly — it stages into
+`_generated/` so this stays a reviewed diff, not a blind overwrite.
 
-**Once the schema matches the real database**, schema changes *authored by
-this codebase* go through the normal Drizzle migration flow:
+**Applying `schema.ts` to a database** — two options, both driven by
+whatever `DATABASE_URL` points at:
 
 ```bash
-npm run db:generate   # diffs src/database/schema against drizzle/ migration history
-npm run db:migrate    # applies pending migrations
-npm run db:studio     # local GUI for browsing the DB
+npm run db:push        # diffs schema.ts against the target DB's actual structure, applies directly — no migration file. Good for a local/throwaway DB (e.g. this repo's docker-compose Postgres).
+npm run db:generate    # diffs schema.ts against drizzle/ migration history, writes SQL
+npm run db:migrate     # applies pending migrations — use this + db:generate for staging/production, where a reviewable migration trail matters
+npm run db:studio      # local GUI for browsing the DB
 ```
 
 Run `db:migrate` as an explicit release step, not automatically at app boot.
