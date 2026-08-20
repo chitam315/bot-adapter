@@ -9,3 +9,16 @@ export const PINO_REDACT_PATHS = [
 ];
 
 export const PINO_REDACT_CENSOR = '[Redacted]';
+
+// pino-roll options (file path is joined with process.cwd() at call site,
+// since it can't be a static constant). See
+// https://github.com/mcollina/pino-roll for option semantics.
+export const PINO_ROLL_OPTIONS = {
+  frequency: 'daily' as const,
+  size: '100m',
+  limit: { count: 30 },
+  mkdir: true,
+  extension: '.log',
+  dateFormat: 'yyyy-MM-dd',
+  symlink: false,
+};
