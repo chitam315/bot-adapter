@@ -2,7 +2,7 @@ import { Controller, Inject, Post, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CloudAdapter } from 'botbuilder';
 import { Request, Response } from 'express';
-import { BOT_ADAPTER } from './bot.constants';
+import { BOT_ADAPTER } from '../constants';
 import { BotActivityHandler } from './teams-activity-handler';
 
 /**

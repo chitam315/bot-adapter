@@ -1,7 +1,7 @@
 import { Inject, Module, OnApplicationShutdown } from '@nestjs/common';
 import { Pool } from 'pg';
 import { ConfigModule } from '../config/config.module';
-import { DRIZZLE, PG_POOL } from './database.constants';
+import { DRIZZLE, PG_POOL } from '../constants';
 import { drizzleProvider, pgPoolProvider } from './database.providers';
 
 @Module({

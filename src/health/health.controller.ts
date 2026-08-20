@@ -6,7 +6,7 @@ import {
   HealthIndicatorService,
 } from '@nestjs/terminus';
 import { Pool } from 'pg';
-import { PG_POOL } from '../database/database.constants';
+import { PG_POOL } from '../constants';
 
 @ApiTags('health')
 @Controller('health')

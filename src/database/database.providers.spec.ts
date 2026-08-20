@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { AppConfigService } from '../config/config.service';
-import { DRIZZLE, PG_POOL } from './database.constants';
+import { DRIZZLE, PG_POOL } from '../constants';
 import { drizzleProvider, pgPoolProvider } from './database.providers';
 
 type DrizzleClient = ReturnType<typeof drizzle>;

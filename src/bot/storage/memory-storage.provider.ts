@@ -1,6 +1,6 @@
 import { Provider } from '@nestjs/common';
 import { MemoryStorage } from 'botbuilder';
-import { BOT_STORAGE } from '../bot.constants';
+import { BOT_STORAGE } from '../../constants';
 
 /**
  * In-memory conversation/user state — resets on restart/redeploy. BOT_STORAGE

@@ -3,8 +3,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { loadKeyVaultSecrets } from './azure-key-vault/key-vault-secrets.loader';
 import { AppConfigService } from './config/config.service';
-
-const SWAGGER_PATH = 'docs';
+import { SWAGGER_PATH } from './constants';
 
 async function bootstrap() {
   // Must resolve before AppModule is imported: @nestjs/config validates

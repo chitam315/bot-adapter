@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TerminusModule } from '@nestjs/terminus';
-import { PG_POOL } from '../database/database.constants';
+import { PG_POOL } from '../constants';
 import { HealthController } from './health.controller';
 
 describe('HealthController', () => {

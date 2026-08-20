@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool, type PoolClient } from 'pg';
 import { registerTypes } from 'pgvector/pg';
 import { AppConfigService } from '../config/config.service';
-import { DRIZZLE, PG_POOL } from './database.constants';
+import { DRIZZLE, PG_POOL } from '../constants';
 import * as schema from './schema';
 
 const logger = new Logger('DatabaseModule');

@@ -9,11 +9,11 @@ import {
 } from 'botbuilder';
 import { PinoLogger } from 'nestjs-pino';
 import { ConversationTurn, GenerationService } from '../ai/generation.service';
-import { BOT_STORAGE } from './bot.constants';
-
-// Bounds how much conversation history is kept/sent to the model per turn.
-const MAX_HISTORY_TURNS = 10;
-const HISTORY_STATE_KEY = 'conversationHistory';
+import {
+  BOT_STORAGE,
+  HISTORY_STATE_KEY,
+  MAX_HISTORY_TURNS,
+} from '../constants';
 
 @Injectable()
 export class BotActivityHandler extends TeamsActivityHandler {

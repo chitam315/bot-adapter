@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { embed } from 'ai';
+import { embed, embedMany } from 'ai';
 import { AzureOpenAiProvider } from './azure-openai.provider';
 
 @Injectable()
@@ -13,5 +13,14 @@ export class EmbeddingService {
     });
 
     return embedding;
+  }
+
+  async embedMany(texts: string[]): Promise<number[][]> {
+    const { embeddings } = await embedMany({
+      model: this.azureOpenAi.embeddingModel(),
+      values: texts,
+    });
+
+    return embeddings;
   }
 }

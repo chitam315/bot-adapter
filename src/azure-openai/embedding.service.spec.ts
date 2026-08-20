@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { embed } from 'ai';
+import { embed, embedMany } from 'ai';
 import { EmbeddingService } from './embedding.service';
 import { AzureOpenAiProvider } from './azure-openai.provider';
 
 jest.mock('ai', () => ({
   embed: jest.fn(),
+  embedMany: jest.fn(),
 }));
 
 describe('EmbeddingService', () => {
@@ -44,5 +45,28 @@ describe('EmbeddingService', () => {
       value: 'hello world',
     });
     expect(result).toEqual([0.1, 0.2, 0.3]);
+  });
+
+  it('embeds multiple texts in a single batch call', async () => {
+    jest.mocked(embedMany).mockResolvedValue({
+      embeddings: [
+        [0.1, 0.2, 0.3],
+        [0.4, 0.5, 0.6],
+      ],
+      values: ['hello', 'world'],
+      usage: { tokens: 6 },
+      warnings: [],
+    });
+
+    const result = await service.embedMany(['hello', 'world']);
+
+    expect(embedMany).toHaveBeenCalledWith({
+      model: embeddingModel,
+      values: ['hello', 'world'],
+    });
+    expect(result).toEqual([
+      [0.1, 0.2, 0.3],
+      [0.4, 0.5, 0.6],
+    ]);
   });
 });

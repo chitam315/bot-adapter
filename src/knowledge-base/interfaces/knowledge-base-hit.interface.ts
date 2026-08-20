@@ -1,4 +1,4 @@
-export type KnowledgeBaseSourceType = 'document' | 'faq';
+import { KnowledgeBaseSourceType } from '../../constants';
 
 /**
  * Internal service -> tool contract. Never returned directly from an HTTP

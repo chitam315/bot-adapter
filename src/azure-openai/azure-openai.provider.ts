@@ -24,6 +24,8 @@ export class AzureOpenAiProvider {
   }
 
   embeddingModel(): EmbeddingModel {
-    return this.provider.embedding(this.config.azureOpenAi.embeddingDeployment);
+    return this.provider.embeddingModel(
+      this.config.azureOpenAi.embeddingDeployment,
+    );
   }
 }

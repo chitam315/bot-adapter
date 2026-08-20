@@ -6,7 +6,7 @@ import {
   TurnContext,
 } from 'botbuilder';
 import { AppConfigService } from '../config/config.service';
-import { BOT_ADAPTER } from './bot.constants';
+import { BOT_ADAPTER } from '../constants';
 
 const logger = new Logger('BotFrameworkAdapter');
 

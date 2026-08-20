@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EmbeddingService } from '../azure-openai/embedding.service';
-import { DRIZZLE } from '../database/database.constants';
+import { DRIZZLE } from '../constants';
 import { KnowledgeBaseService } from './knowledge-base.service';
 
 describe('KnowledgeBaseService', () => {

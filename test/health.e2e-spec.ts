@@ -4,7 +4,7 @@ import { HealthCheckResult } from '@nestjs/terminus';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { DRIZZLE, PG_POOL } from '../src/database/database.constants';
+import { DRIZZLE, PG_POOL } from '../src/constants';
 
 describe('Health (e2e)', () => {
   let app: INestApplication<App>;

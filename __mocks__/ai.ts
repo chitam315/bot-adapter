@@ -7,6 +7,7 @@
 // factory when they need call-specific assertions (e.g. generation.service.spec.ts).
 export const generateText = jest.fn();
 export const embed = jest.fn();
+export const embedMany = jest.fn();
 export const stepCountIs = jest.fn();
 
 // The real `tool()` is close to an identity function around the object you

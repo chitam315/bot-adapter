@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import { ConfigModule } from '../config/config.module';
 import { AppConfigService } from '../config/config.service';
 import { DatabaseModule } from '../database/database.module';
-import { PG_POOL } from '../database/database.constants';
+import { PG_POOL } from '../constants';
 
 /**
  * One-time boot wiring: structured logging and a fail-fast database

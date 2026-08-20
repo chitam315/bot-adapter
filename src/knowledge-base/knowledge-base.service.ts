@@ -2,11 +2,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import { cosineDistance, desc, eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { EmbeddingService } from '../azure-openai/embedding.service';
-import { DRIZZLE } from '../database/database.constants';
+import {
+  DEFAULT_SEARCH_LIMIT,
+  DRIZZLE,
+  KnowledgeBaseSourceType,
+} from '../constants';
 import * as schema from '../database/schema';
 import { KnowledgeBaseHit } from './interfaces/knowledge-base-hit.interface';
-
-const DEFAULT_LIMIT = 5;
 
 @Injectable()
 export class KnowledgeBaseService {
@@ -19,7 +21,7 @@ export class KnowledgeBaseService {
     query: string,
     opts: { limit?: number } = {},
   ): Promise<KnowledgeBaseHit[]> {
-    const limit = opts.limit ?? DEFAULT_LIMIT;
+    const limit = opts.limit ?? DEFAULT_SEARCH_LIMIT;
     const queryEmbedding = await this.embeddingService.embed(query);
     const similarity = sql<number>`1 - (${cosineDistance(schema.embeddings.embedding, queryEmbedding)})`;
 
@@ -63,7 +65,7 @@ export class KnowledgeBaseService {
     if (row.faqId) {
       return {
         content: row.content,
-        sourceType: 'faq',
+        sourceType: KnowledgeBaseSourceType.Faq,
         sourceId: row.faqId,
         title: row.faqQuestion,
         score: row.score,
@@ -72,7 +74,7 @@ export class KnowledgeBaseService {
 
     return {
       content: row.content,
-      sourceType: 'document',
+      sourceType: KnowledgeBaseSourceType.Document,
       sourceId: row.documentId ?? '',
       title:
         row.documentName && row.documentPageNumber != null

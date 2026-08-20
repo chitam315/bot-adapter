@@ -6,8 +6,7 @@ import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { GenerationService } from '../src/ai/generation.service';
 import { AppModule } from '../src/app.module';
-import { BOT_ADAPTER } from '../src/bot/bot.constants';
-import { DRIZZLE, PG_POOL } from '../src/database/database.constants';
+import { BOT_ADAPTER, DRIZZLE, PG_POOL } from '../src/constants';
 
 describe('Bot messages (e2e)', () => {
   let app: INestApplication<App>;

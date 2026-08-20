@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { generateText } from 'ai';
 import { AzureOpenAiProvider } from '../azure-openai/azure-openai.provider';
-import { KNOWLEDGE_BASE_TOOL } from './ai.constants';
+import { KNOWLEDGE_BASE_TOOL } from '../constants';
 import { GenerationService } from './generation.service';
 
 // 'ai' is auto-mocked project-wide via __mocks__/ai.ts (see that file for why).

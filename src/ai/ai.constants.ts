@@ -1,1 +1,0 @@
-export const KNOWLEDGE_BASE_TOOL = Symbol('KNOWLEDGE_BASE_TOOL');
