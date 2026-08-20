@@ -31,7 +31,6 @@ export const envSchema = z.object({
     .string()
     .url('AZURE_OPENAI_ENDPOINT must be a valid URL'),
   AZURE_OPENAI_API_KEY: z.string().min(1, 'AZURE_OPENAI_API_KEY is required'),
-  AZURE_OPENAI_API_VERSION: z.string().optional(),
   AZURE_OPENAI_GPT_4_1_DEPLOYMENT: z
     .string()
     .min(1, 'AZURE_OPENAI_GPT_4_1_DEPLOYMENT is required'),
@@ -46,7 +45,6 @@ export const envSchema = z.object({
     .string()
     .url('AZURE_OPENAI2_ENDPOINT must be a valid URL'),
   AZURE_OPENAI2_API_KEY: z.string().min(1, 'AZURE_OPENAI2_API_KEY is required'),
-  AZURE_OPENAI2_API_VERSION: z.string().optional(),
   AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT: z
     .string()
     .min(1, 'AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT is required'),

@@ -190,13 +190,11 @@ obscurely later when a value is first read.
 | `MICROSOFT_APP_TENANT_ID` | no (default empty) | Required for `SingleTenant` |
 | `AZURE_OPENAI_ENDPOINT` | **yes** | AUE resource URL, e.g. `https://<resource-name>.openai.azure.com` |
 | `AZURE_OPENAI_API_KEY` | **yes** | |
-| `AZURE_OPENAI_API_VERSION` | no | Defaults to the AI SDK's built-in default |
 | `AZURE_OPENAI_GPT_4_1_DEPLOYMENT` | **yes** | Deployment name, not model name |
 | `AZURE_OPENAI_GPT_5_DEPLOYMENT` | **yes** | Deployment name, not model name |
 | `AZURE_OPENAI_O4_MINI_DEPLOYMENT` | **yes** | Deployment name, not model name |
 | `AZURE_OPENAI2_ENDPOINT` | **yes** | SEA resource URL |
 | `AZURE_OPENAI2_API_KEY` | **yes** | |
-| `AZURE_OPENAI2_API_VERSION` | no | Defaults to the AI SDK's built-in default |
 | `AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT` | **yes** | Deployment name, not model name |
 | `AZURE_OPENAI2_GPT_5_1_DEPLOYMENT` | **yes** | Deployment name, not model name |
 | `AZURE_OPENAI2_EMBEDDING_DEPLOYMENT` | **yes** | Deployment name for `text-embedding-3-large`, the only embedding model deployed |

@@ -18,13 +18,11 @@ describe('AppConfigService', () => {
     MICROSOFT_APP_TENANT_ID: 'tenant-id',
     AZURE_OPENAI_ENDPOINT: 'https://my-resource-aue.openai.azure.com',
     AZURE_OPENAI_API_KEY: 'aue-api-key',
-    AZURE_OPENAI_API_VERSION: '2024-10-01-preview',
     AZURE_OPENAI_GPT_4_1_DEPLOYMENT: 'aue-gpt-4.1-deployment',
     AZURE_OPENAI_GPT_5_DEPLOYMENT: 'aue-gpt-5-deployment',
     AZURE_OPENAI_O4_MINI_DEPLOYMENT: 'aue-o4-mini-deployment',
     AZURE_OPENAI2_ENDPOINT: 'https://my-resource-sea.openai.azure.com',
     AZURE_OPENAI2_API_KEY: 'sea-api-key',
-    AZURE_OPENAI2_API_VERSION: '2024-10-01-preview',
     AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT: 'sea-gpt-4.1-mini-deployment',
     AZURE_OPENAI2_GPT_5_1_DEPLOYMENT: 'sea-gpt-5.1-deployment',
     AZURE_OPENAI2_EMBEDDING_DEPLOYMENT: 'sea-embedding-deployment',
@@ -65,12 +63,10 @@ describe('AppConfigService', () => {
         [AzureOpenAiRegion.Aue]: {
           endpoint: env.AZURE_OPENAI_ENDPOINT,
           apiKey: env.AZURE_OPENAI_API_KEY,
-          apiVersion: env.AZURE_OPENAI_API_VERSION,
         },
         [AzureOpenAiRegion.Sea]: {
           endpoint: env.AZURE_OPENAI2_ENDPOINT,
           apiKey: env.AZURE_OPENAI2_API_KEY,
-          apiVersion: env.AZURE_OPENAI2_API_VERSION,
         },
       },
       chatDeployments: {

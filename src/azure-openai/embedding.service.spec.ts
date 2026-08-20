@@ -37,12 +37,13 @@ describe('EmbeddingService', () => {
     expect(service).toBeDefined();
   });
 
-  it('embeds text using the configured Azure OpenAI embedding model', async () => {
+  it('embeds text using the configured Azure OpenAI embedding model, truncated to the pgvector column width', async () => {
     const result = await service.embed('hello world');
 
     expect(embed).toHaveBeenCalledWith({
       model: embeddingModel,
       value: 'hello world',
+      providerOptions: { openai: { dimensions: 2000 } },
     });
     expect(result).toEqual([0.1, 0.2, 0.3]);
   });
@@ -63,6 +64,7 @@ describe('EmbeddingService', () => {
     expect(embedMany).toHaveBeenCalledWith({
       model: embeddingModel,
       values: ['hello', 'world'],
+      providerOptions: { openai: { dimensions: 2000 } },
     });
     expect(result).toEqual([
       [0.1, 0.2, 0.3],

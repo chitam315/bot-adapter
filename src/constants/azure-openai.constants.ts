@@ -27,3 +27,9 @@ export const AZURE_CHAT_MODEL_REGION: Readonly<
 
 // The only embedding model currently deployed, and the region it lives in.
 export const AZURE_EMBEDDING_REGION = AzureOpenAiRegion.Sea;
+
+// Must match the `embeddings.embedding` pgvector column's dimensions
+// (schema.ts, introspected from the DB — see docs/ARCHITECTURE.md §6).
+// text-embedding-3-large natively outputs 3072 dimensions, so this is passed
+// as an explicit truncation request on every embed call, not just documentation.
+export const EMBEDDING_DIMENSIONS = 2000;

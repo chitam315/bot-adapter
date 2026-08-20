@@ -29,12 +29,10 @@ describe('AzureOpenAiProvider', () => {
         [AzureOpenAiRegion.Aue]: {
           endpoint: 'https://aue.openai.azure.com',
           apiKey: 'aue-key',
-          apiVersion: undefined,
         },
         [AzureOpenAiRegion.Sea]: {
           endpoint: 'https://sea.openai.azure.com',
           apiKey: 'sea-key',
-          apiVersion: undefined,
         },
       },
       chatDeployments: {
