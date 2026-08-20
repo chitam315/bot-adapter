@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import { ConfigModule } from '../config/config.module';
 import { AppConfigService } from '../config/config.service';
 import { DatabaseModule } from '../database/database.module';
-import { PG_POOL } from '../constants';
+import { PG_POOL, PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from '../constants';
 
 /**
  * One-time boot wiring: structured logging and a fail-fast database
@@ -25,11 +25,10 @@ import { PG_POOL } from '../constants';
           }) =>
             (req.headers['x-correlation-id'] as string | undefined) ??
             randomUUID(),
-          redact: [
-            'req.headers.authorization',
-            'req.headers.cookie',
-            'req.headers["ocp-apim-subscription-key"]',
-          ],
+          redact: {
+            paths: PINO_REDACT_PATHS,
+            censor: PINO_REDACT_CENSOR,
+          },
           transport: config.isProduction
             ? undefined
             : { target: 'pino-pretty', options: { singleLine: true } },

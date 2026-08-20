@@ -286,9 +286,9 @@ Structured logging via `nestjs-pino`, wired in
 - Inject `PinoLogger` (from `nestjs-pino`) into any service that needs to
   log, and call `.setContext(MyService.name)` in the constructor.
 - **Never log:** secrets, full request bodies containing user PII, or raw
-  embedding vectors. `GlobalExceptionFilter` and `core.module.ts` already
-  redact `Authorization`/`Cookie` headers — extend the `redact` list there if
-  you add another header carrying secrets.
+  embedding vectors. `core.module.ts` wires pino-http's `redact` option
+  (paths + censor) from [logging.constants.ts](../src/constants/logging.constants.ts)
+  — add a path there if you introduce another header/field carrying secrets.
 
 ## 11. Error handling
 
