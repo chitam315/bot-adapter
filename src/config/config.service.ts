@@ -60,18 +60,12 @@ export class AppConfigService {
           apiKey: this.configService.get('AZURE_OPENAI_API_KEY', {
             infer: true,
           }),
-          apiVersion: this.configService.get('AZURE_OPENAI_API_VERSION', {
-            infer: true,
-          }),
         },
         [AzureOpenAiRegion.Sea]: {
           endpoint: this.configService.get('AZURE_OPENAI2_ENDPOINT', {
             infer: true,
           }),
           apiKey: this.configService.get('AZURE_OPENAI2_API_KEY', {
-            infer: true,
-          }),
-          apiVersion: this.configService.get('AZURE_OPENAI2_API_VERSION', {
             infer: true,
           }),
         },

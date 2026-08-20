@@ -31,12 +31,10 @@ export class AzureOpenAiProvider {
       [AzureOpenAiRegion.Aue]: createAzure({
         baseURL: regions[AzureOpenAiRegion.Aue].endpoint,
         apiKey: regions[AzureOpenAiRegion.Aue].apiKey,
-        apiVersion: regions[AzureOpenAiRegion.Aue].apiVersion,
       }),
       [AzureOpenAiRegion.Sea]: createAzure({
         baseURL: regions[AzureOpenAiRegion.Sea].endpoint,
         apiKey: regions[AzureOpenAiRegion.Sea].apiKey,
-        apiVersion: regions[AzureOpenAiRegion.Sea].apiVersion,
       }),
     };
   }
