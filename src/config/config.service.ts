@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AzureChatModel, AzureOpenAiRegion } from '../constants';
 import { Env } from './env.schema';
 
 /**
@@ -47,19 +48,58 @@ export class AppConfigService {
 
   get azureOpenAi() {
     return {
-      endpoint: this.configService.get('AZURE_OPENAI_ENDPOINT', {
-        infer: true,
-      }),
-      region: this.configService.get('AZURE_OPENAI_REGION', { infer: true }),
-      apiKey: this.configService.get('AZURE_OPENAI_API_KEY', { infer: true }),
-      apiVersion: this.configService.get('AZURE_OPENAI_API_VERSION', {
-        infer: true,
-      }),
-      chatDeployment: this.configService.get('AZURE_OPENAI_CHAT_DEPLOYMENT', {
-        infer: true,
-      }),
+      defaultChatModel: this.configService.get(
+        'AZURE_OPENAI_DEFAULT_CHAT_MODEL',
+        { infer: true },
+      ),
+      regions: {
+        [AzureOpenAiRegion.Aue]: {
+          endpoint: this.configService.get('AZURE_OPENAI_ENDPOINT', {
+            infer: true,
+          }),
+          apiKey: this.configService.get('AZURE_OPENAI_API_KEY', {
+            infer: true,
+          }),
+          apiVersion: this.configService.get('AZURE_OPENAI_API_VERSION', {
+            infer: true,
+          }),
+        },
+        [AzureOpenAiRegion.Sea]: {
+          endpoint: this.configService.get('AZURE_OPENAI2_ENDPOINT', {
+            infer: true,
+          }),
+          apiKey: this.configService.get('AZURE_OPENAI2_API_KEY', {
+            infer: true,
+          }),
+          apiVersion: this.configService.get('AZURE_OPENAI2_API_VERSION', {
+            infer: true,
+          }),
+        },
+      },
+      chatDeployments: {
+        [AzureChatModel.Gpt41]: this.configService.get(
+          'AZURE_OPENAI_GPT_4_1_DEPLOYMENT',
+          { infer: true },
+        ),
+        [AzureChatModel.Gpt5]: this.configService.get(
+          'AZURE_OPENAI_GPT_5_DEPLOYMENT',
+          { infer: true },
+        ),
+        [AzureChatModel.O4Mini]: this.configService.get(
+          'AZURE_OPENAI_O4_MINI_DEPLOYMENT',
+          { infer: true },
+        ),
+        [AzureChatModel.Gpt41Mini]: this.configService.get(
+          'AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT',
+          { infer: true },
+        ),
+        [AzureChatModel.Gpt51]: this.configService.get(
+          'AZURE_OPENAI2_GPT_5_1_DEPLOYMENT',
+          { infer: true },
+        ),
+      },
       embeddingDeployment: this.configService.get(
-        'AZURE_OPENAI_EMBEDDING_DEPLOYMENT',
+        'AZURE_OPENAI2_EMBEDDING_DEPLOYMENT',
         { infer: true },
       ),
     };

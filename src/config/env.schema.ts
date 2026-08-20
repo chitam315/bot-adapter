@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AzureChatModel } from '../constants';
 
 export const envSchema = z.object({
   NODE_ENV: z
@@ -21,23 +22,45 @@ export const envSchema = z.object({
     .default('MultiTenant'),
   MICROSOFT_APP_TENANT_ID: z.string().default(''),
 
-  // Azure OpenAI, consumed via the Vercel AI SDK (@ai-sdk/azure).
-  // ENDPOINT/REGION/API_KEY match the "Keys and Endpoint" page in the Azure
-  // Portal for the resource. REGION isn't used in the API call itself
-  // (routing is fully determined by ENDPOINT) — it's captured for
-  // reference/observability (e.g. logging, future region-aware routing).
+  // Azure OpenAI, consumed via the Vercel AI SDK (@ai-sdk/azure). Two
+  // separate resources (AUE, SEA), each with its own endpoint/key and its
+  // own subset of chat model deployments — see AZURE_CHAT_MODEL_REGION in
+  // src/constants/azure-openai.constants.ts for which model lives where.
+  // Embeddings (text-embedding-3-large) are only deployed in SEA.
   AZURE_OPENAI_ENDPOINT: z
     .string()
     .url('AZURE_OPENAI_ENDPOINT must be a valid URL'),
-  AZURE_OPENAI_REGION: z.string().min(1, 'AZURE_OPENAI_REGION is required'),
   AZURE_OPENAI_API_KEY: z.string().min(1, 'AZURE_OPENAI_API_KEY is required'),
   AZURE_OPENAI_API_VERSION: z.string().optional(),
-  AZURE_OPENAI_CHAT_DEPLOYMENT: z
+  AZURE_OPENAI_GPT_4_1_DEPLOYMENT: z
     .string()
-    .min(1, 'AZURE_OPENAI_CHAT_DEPLOYMENT is required'),
-  AZURE_OPENAI_EMBEDDING_DEPLOYMENT: z
+    .min(1, 'AZURE_OPENAI_GPT_4_1_DEPLOYMENT is required'),
+  AZURE_OPENAI_GPT_5_DEPLOYMENT: z
     .string()
-    .min(1, 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT is required'),
+    .min(1, 'AZURE_OPENAI_GPT_5_DEPLOYMENT is required'),
+  AZURE_OPENAI_O4_MINI_DEPLOYMENT: z
+    .string()
+    .min(1, 'AZURE_OPENAI_O4_MINI_DEPLOYMENT is required'),
+
+  AZURE_OPENAI2_ENDPOINT: z
+    .string()
+    .url('AZURE_OPENAI2_ENDPOINT must be a valid URL'),
+  AZURE_OPENAI2_API_KEY: z.string().min(1, 'AZURE_OPENAI2_API_KEY is required'),
+  AZURE_OPENAI2_API_VERSION: z.string().optional(),
+  AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT: z
+    .string()
+    .min(1, 'AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT is required'),
+  AZURE_OPENAI2_GPT_5_1_DEPLOYMENT: z
+    .string()
+    .min(1, 'AZURE_OPENAI2_GPT_5_1_DEPLOYMENT is required'),
+  AZURE_OPENAI2_EMBEDDING_DEPLOYMENT: z
+    .string()
+    .min(1, 'AZURE_OPENAI2_EMBEDDING_DEPLOYMENT is required'),
+
+  // Chat model used when a caller doesn't ask for a specific one at runtime.
+  AZURE_OPENAI_DEFAULT_CHAT_MODEL: z
+    .nativeEnum(AzureChatModel)
+    .default(AzureChatModel.Gpt41),
 });
 
 export type Env = z.infer<typeof envSchema>;

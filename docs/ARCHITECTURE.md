@@ -188,12 +188,19 @@ obscurely later when a value is first read.
 | `MICROSOFT_APP_PASSWORD` | no (default empty) | Paired with `MICROSOFT_APP_ID` |
 | `MICROSOFT_APP_TYPE` | no (default `MultiTenant`) | `MultiTenant` \| `SingleTenant` \| `UserAssignedMSI` |
 | `MICROSOFT_APP_TENANT_ID` | no (default empty) | Required for `SingleTenant` |
-| `AZURE_OPENAI_ENDPOINT` | **yes** | Full resource URL, e.g. `https://<resource-name>.openai.azure.com` |
-| `AZURE_OPENAI_REGION` | **yes** | Informational only — `ENDPOINT` alone determines routing |
+| `AZURE_OPENAI_ENDPOINT` | **yes** | AUE resource URL, e.g. `https://<resource-name>.openai.azure.com` |
 | `AZURE_OPENAI_API_KEY` | **yes** | |
 | `AZURE_OPENAI_API_VERSION` | no | Defaults to the AI SDK's built-in default |
-| `AZURE_OPENAI_CHAT_DEPLOYMENT` | **yes** | Deployment name, not model name |
-| `AZURE_OPENAI_EMBEDDING_DEPLOYMENT` | **yes** | Deployment name, not model name |
+| `AZURE_OPENAI_GPT_4_1_DEPLOYMENT` | **yes** | Deployment name, not model name |
+| `AZURE_OPENAI_GPT_5_DEPLOYMENT` | **yes** | Deployment name, not model name |
+| `AZURE_OPENAI_O4_MINI_DEPLOYMENT` | **yes** | Deployment name, not model name |
+| `AZURE_OPENAI2_ENDPOINT` | **yes** | SEA resource URL |
+| `AZURE_OPENAI2_API_KEY` | **yes** | |
+| `AZURE_OPENAI2_API_VERSION` | no | Defaults to the AI SDK's built-in default |
+| `AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT` | **yes** | Deployment name, not model name |
+| `AZURE_OPENAI2_GPT_5_1_DEPLOYMENT` | **yes** | Deployment name, not model name |
+| `AZURE_OPENAI2_EMBEDDING_DEPLOYMENT` | **yes** | Deployment name for `text-embedding-3-large`, the only embedding model deployed |
+| `AZURE_OPENAI_DEFAULT_CHAT_MODEL` | no (default `gpt-4.1`) | One of `gpt-4.1` \| `gpt-5` \| `o4-mini` \| `gpt-4.1-mini` \| `gpt-5.1`; used when a caller doesn't pick a model at runtime |
 | `AZURE_KEY_VAULT_URL` | no | Set to enable Key Vault secret resolution — see below |
 | `AZURE_KEY_VAULT_TENANT_ID` | no | Required together with the other three `AZURE_KEY_VAULT_*` vars |
 | `AZURE_KEY_VAULT_CLIENT_ID` | no | Service principal client ID |
@@ -216,9 +223,11 @@ validation described above.
 When enabled, [key-vault-secrets.loader.ts](../src/azure-key-vault/key-vault-secrets.loader.ts)
 authenticates with a `ClientSecretCredential` and looks up a fixed list of
 secrets by name (`DATABASE_URL` → `database-url`, `MICROSOFT_APP_PASSWORD` →
-`microsoft-app-password`, `AZURE_OPENAI_API_KEY` → `azure-openai-api-key` —
-Key Vault secret names can't contain underscores, hence the kebab-case
-mapping). **Key Vault wins for any secret it has; a secret Key Vault doesn't
+`microsoft-app-password`, `AZURE_OPENAI_API_KEY` →
+`azure-openai-api-key`, `AZURE_OPENAI2_API_KEY` →
+`azure-openai2-api-key` — Key Vault secret names can't contain
+underscores, hence the kebab-case mapping). **Key Vault wins for any secret
+it has; a secret Key Vault doesn't
 have quietly falls back to whatever's already in `.env`/`process.env`.** A
 real Key Vault error (auth failure, network error, wrong permissions) is
 *not* swallowed the same way — it throws and aborts boot, since Key Vault
@@ -324,5 +333,5 @@ Two separate paths, because they occur at different points in the request lifecy
 - Target: Azure (App Service or Container Apps).
 - Wire the platform's health probe to `GET /health`, not `GET /` — only `/health` verifies database connectivity.
 - Run `npm run db:migrate` as an explicit step in your release pipeline, not automatically at app boot.
-- Store secrets (Azure OpenAI key, Microsoft App Password, `DATABASE_URL`) in Azure App Service application settings or Key Vault, not in a committed `.env`.
+- Store secrets (both Azure OpenAI API keys, Microsoft App Password, `DATABASE_URL`) in Azure App Service application settings or Key Vault, not in a committed `.env`.
 - `main.ts` calls `app.enableShutdownHooks()`, and `DatabaseModule` closes its Postgres pool on `onApplicationShutdown` — make sure your platform sends `SIGTERM` (not `SIGKILL`) on redeploy so this runs.

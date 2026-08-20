@@ -6,8 +6,16 @@
 // e2e, by overriding PG_POOL/DRIZZLE/GenerationService per spec.
 process.env.DATABASE_URL ??=
   'postgres://user:password@localhost:5432/bot_adapter_test';
-process.env.AZURE_OPENAI_ENDPOINT ??= 'https://test-resource.openai.azure.com';
-process.env.AZURE_OPENAI_REGION ??= 'eastus';
-process.env.AZURE_OPENAI_API_KEY ??= 'test-api-key';
-process.env.AZURE_OPENAI_CHAT_DEPLOYMENT ??= 'test-chat-deployment';
-process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT ??= 'test-embedding-deployment';
+process.env.AZURE_OPENAI_ENDPOINT ??=
+  'https://test-resource-aue.openai.azure.com';
+process.env.AZURE_OPENAI_API_KEY ??= 'test-aue-api-key';
+process.env.AZURE_OPENAI_GPT_4_1_DEPLOYMENT ??= 'test-gpt-4.1-deployment';
+process.env.AZURE_OPENAI_GPT_5_DEPLOYMENT ??= 'test-gpt-5-deployment';
+process.env.AZURE_OPENAI_O4_MINI_DEPLOYMENT ??= 'test-o4-mini-deployment';
+process.env.AZURE_OPENAI2_ENDPOINT ??=
+  'https://test-resource-sea.openai.azure.com';
+process.env.AZURE_OPENAI2_API_KEY ??= 'test-sea-api-key';
+process.env.AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT ??=
+  'test-gpt-4.1-mini-deployment';
+process.env.AZURE_OPENAI2_GPT_5_1_DEPLOYMENT ??= 'test-gpt-5.1-deployment';
+process.env.AZURE_OPENAI2_EMBEDDING_DEPLOYMENT ??= 'test-embedding-deployment';

@@ -16,6 +16,7 @@ const SECRET_NAME_BY_ENV_KEY: Readonly<Record<string, string>> = {
   DATABASE_URL: 'database-url',
   MICROSOFT_APP_PASSWORD: 'microsoft-app-password',
   AZURE_OPENAI_API_KEY: 'azure-openai-api-key',
+  AZURE_OPENAI2_API_KEY: 'azure-openai2-api-key',
 };
 
 /**

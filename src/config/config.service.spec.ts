@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { AzureChatModel, AzureOpenAiRegion } from '../constants';
 import { AppConfigService } from './config.service';
 import { Env } from './env.schema';
 
@@ -15,12 +16,19 @@ describe('AppConfigService', () => {
     MICROSOFT_APP_PASSWORD: 'app-password',
     MICROSOFT_APP_TYPE: 'MultiTenant',
     MICROSOFT_APP_TENANT_ID: 'tenant-id',
-    AZURE_OPENAI_ENDPOINT: 'https://my-resource.openai.azure.com',
-    AZURE_OPENAI_REGION: 'eastus',
-    AZURE_OPENAI_API_KEY: 'api-key',
+    AZURE_OPENAI_ENDPOINT: 'https://my-resource-aue.openai.azure.com',
+    AZURE_OPENAI_API_KEY: 'aue-api-key',
     AZURE_OPENAI_API_VERSION: '2024-10-01-preview',
-    AZURE_OPENAI_CHAT_DEPLOYMENT: 'chat-deployment',
-    AZURE_OPENAI_EMBEDDING_DEPLOYMENT: 'embedding-deployment',
+    AZURE_OPENAI_GPT_4_1_DEPLOYMENT: 'aue-gpt-4.1-deployment',
+    AZURE_OPENAI_GPT_5_DEPLOYMENT: 'aue-gpt-5-deployment',
+    AZURE_OPENAI_O4_MINI_DEPLOYMENT: 'aue-o4-mini-deployment',
+    AZURE_OPENAI2_ENDPOINT: 'https://my-resource-sea.openai.azure.com',
+    AZURE_OPENAI2_API_KEY: 'sea-api-key',
+    AZURE_OPENAI2_API_VERSION: '2024-10-01-preview',
+    AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT: 'sea-gpt-4.1-mini-deployment',
+    AZURE_OPENAI2_GPT_5_1_DEPLOYMENT: 'sea-gpt-5.1-deployment',
+    AZURE_OPENAI2_EMBEDDING_DEPLOYMENT: 'sea-embedding-deployment',
+    AZURE_OPENAI_DEFAULT_CHAT_MODEL: AzureChatModel.Gpt41,
   };
 
   beforeEach(async () => {
@@ -52,12 +60,27 @@ describe('AppConfigService', () => {
       appTenantId: env.MICROSOFT_APP_TENANT_ID,
     });
     expect(service.azureOpenAi).toEqual({
-      endpoint: env.AZURE_OPENAI_ENDPOINT,
-      region: env.AZURE_OPENAI_REGION,
-      apiKey: env.AZURE_OPENAI_API_KEY,
-      apiVersion: env.AZURE_OPENAI_API_VERSION,
-      chatDeployment: env.AZURE_OPENAI_CHAT_DEPLOYMENT,
-      embeddingDeployment: env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
+      defaultChatModel: env.AZURE_OPENAI_DEFAULT_CHAT_MODEL,
+      regions: {
+        [AzureOpenAiRegion.Aue]: {
+          endpoint: env.AZURE_OPENAI_ENDPOINT,
+          apiKey: env.AZURE_OPENAI_API_KEY,
+          apiVersion: env.AZURE_OPENAI_API_VERSION,
+        },
+        [AzureOpenAiRegion.Sea]: {
+          endpoint: env.AZURE_OPENAI2_ENDPOINT,
+          apiKey: env.AZURE_OPENAI2_API_KEY,
+          apiVersion: env.AZURE_OPENAI2_API_VERSION,
+        },
+      },
+      chatDeployments: {
+        [AzureChatModel.Gpt41]: env.AZURE_OPENAI_GPT_4_1_DEPLOYMENT,
+        [AzureChatModel.Gpt5]: env.AZURE_OPENAI_GPT_5_DEPLOYMENT,
+        [AzureChatModel.O4Mini]: env.AZURE_OPENAI_O4_MINI_DEPLOYMENT,
+        [AzureChatModel.Gpt41Mini]: env.AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT,
+        [AzureChatModel.Gpt51]: env.AZURE_OPENAI2_GPT_5_1_DEPLOYMENT,
+      },
+      embeddingDeployment: env.AZURE_OPENAI2_EMBEDDING_DEPLOYMENT,
     });
   });
 });

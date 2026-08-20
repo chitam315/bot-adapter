@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { generateText, ModelMessage, stepCountIs, Tool } from 'ai';
 import { AzureOpenAiProvider } from '../azure-openai/azure-openai.provider';
-import { KNOWLEDGE_BASE_TOOL, MAX_STEPS, SYSTEM_PROMPT } from '../constants';
+import {
+  AzureChatModel,
+  KNOWLEDGE_BASE_TOOL,
+  MAX_STEPS,
+  SYSTEM_PROMPT,
+} from '../constants';
 
 export interface ConversationTurn {
   role: 'user' | 'assistant';
@@ -11,6 +16,8 @@ export interface ConversationTurn {
 export interface GenerateReplyInput {
   text: string;
   history?: ConversationTurn[];
+  // Defaults to AppConfigService's AZURE_OPENAI_DEFAULT_CHAT_MODEL when omitted.
+  model?: AzureChatModel;
 }
 
 /**
@@ -28,6 +35,7 @@ export class GenerationService {
   async generateReply({
     text,
     history = [],
+    model,
   }: GenerateReplyInput): Promise<string> {
     const messages: ModelMessage[] = [
       ...history.map((turn): ModelMessage => ({
@@ -38,7 +46,7 @@ export class GenerationService {
     ];
 
     const result = await generateText({
-      model: this.azureOpenAi.chatModel(),
+      model: this.azureOpenAi.chatModel(model),
       system: SYSTEM_PROMPT,
       messages,
       tools: { searchKnowledgeBase: this.knowledgeBaseTool },

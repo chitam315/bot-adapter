@@ -73,13 +73,15 @@ describe('loadKeyVaultSecrets', () => {
 
     process.env.DATABASE_URL = 'postgres://from-env';
     process.env.MICROSOFT_APP_PASSWORD = 'env-password';
-    process.env.AZURE_OPENAI_API_KEY = 'env-key';
+    process.env.AZURE_OPENAI_API_KEY = 'env-aue-key';
+    process.env.AZURE_OPENAI2_API_KEY = 'env-sea-key';
 
     await loadKeyVaultSecrets(enabledEnv);
 
     expect(process.env.DATABASE_URL).toBe('postgres://from-vault');
     expect(process.env.MICROSOFT_APP_PASSWORD).toBe('env-password');
-    expect(process.env.AZURE_OPENAI_API_KEY).toBe('env-key');
+    expect(process.env.AZURE_OPENAI_API_KEY).toBe('env-aue-key');
+    expect(process.env.AZURE_OPENAI2_API_KEY).toBe('env-sea-key');
   });
 
   it('throws on a non-404 Key Vault error instead of silently falling back to .env', async () => {
