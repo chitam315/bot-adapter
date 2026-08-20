@@ -14,6 +14,8 @@ describe('validateEnv', () => {
     AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT: 'sea-gpt-4.1-mini-deployment',
     AZURE_OPENAI2_GPT_5_1_DEPLOYMENT: 'sea-gpt-5.1-deployment',
     AZURE_OPENAI2_EMBEDDING_DEPLOYMENT: 'sea-embedding-deployment',
+    SSO_ISSUER: 'https://sso.example.com',
+    SSO_CLIENT_ID: 'sso-client-id',
   };
 
   it('returns typed, defaulted config for valid input', () => {
@@ -24,6 +26,7 @@ describe('validateEnv', () => {
     expect(env.MICROSOFT_APP_TYPE).toBe('MultiTenant');
     expect(env.DATABASE_URL).toBe(validConfig.DATABASE_URL);
     expect(env.AZURE_OPENAI_DEFAULT_CHAT_MODEL).toBe(AzureChatModel.Gpt41);
+    expect(env.SSO_COOKIE_NAME).toBe('idToken');
   });
 
   it('accepts an explicit default chat model', () => {

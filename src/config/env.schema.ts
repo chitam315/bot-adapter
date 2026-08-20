@@ -59,6 +59,12 @@ export const envSchema = z.object({
   AZURE_OPENAI_DEFAULT_CHAT_MODEL: z
     .nativeEnum(AzureChatModel)
     .default(AzureChatModel.Gpt41),
+
+  // SSO/OIDC — verifies the bearer token in SSO_COOKIE_NAME's cookie against
+  // the issuer's JWKS (fetched via OIDC discovery, see JwtVerifierService).
+  SSO_ISSUER: z.string().url('SSO_ISSUER must be a valid URL'),
+  SSO_CLIENT_ID: z.string().min(1, 'SSO_CLIENT_ID is required'),
+  SSO_COOKIE_NAME: z.string().min(1).default('idToken'),
 });
 
 export type Env = z.infer<typeof envSchema>;

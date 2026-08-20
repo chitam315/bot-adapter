@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 import { Logger } from 'nestjs-pino';
 import { loadKeyVaultSecrets } from './azure-key-vault/key-vault-secrets.loader';
 import { AppConfigService } from './config/config.service';
@@ -21,10 +22,14 @@ async function bootstrap() {
 
   const config = app.get(AppConfigService);
 
+  // JwtAuthGuard reads the SSO token from a cookie, so this runs
+  // unconditionally (not just when Swagger is up) — needed in production too.
+  app.use(cookieParser());
+
   // Swagger documents whatever's actually decorated with @nestjs/swagger's
-  // decorators — right now that's nothing beyond the routes themselves, so
-  // it mainly gives a browsable route list. Skipped in production: no
-  // reason to expose a route map to the outside world once deployed.
+  // decorators — right now that's the routes themselves plus the cookie-auth
+  // security scheme on AiController. Skipped in production: no reason to
+  // expose a route map to the outside world once deployed.
   if (!config.isProduction) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('bot-adapter')
@@ -32,6 +37,7 @@ async function bootstrap() {
         'Microsoft Teams chatbot on Azure Bot Service — API reference',
       )
       .setVersion('0.0.1')
+      .addCookieAuth(config.sso.cookieName)
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup(SWAGGER_PATH, app, document);

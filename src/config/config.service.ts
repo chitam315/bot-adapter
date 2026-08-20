@@ -98,4 +98,12 @@ export class AppConfigService {
       ),
     };
   }
+
+  get sso() {
+    return {
+      issuer: this.configService.get('SSO_ISSUER', { infer: true }),
+      clientId: this.configService.get('SSO_CLIENT_ID', { infer: true }),
+      cookieName: this.configService.get('SSO_COOKIE_NAME', { infer: true }),
+    };
+  }
 }

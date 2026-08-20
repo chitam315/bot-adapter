@@ -19,3 +19,5 @@ process.env.AZURE_OPENAI2_GPT_4_1_MINI_DEPLOYMENT ??=
   'test-gpt-4.1-mini-deployment';
 process.env.AZURE_OPENAI2_GPT_5_1_DEPLOYMENT ??= 'test-gpt-5.1-deployment';
 process.env.AZURE_OPENAI2_EMBEDDING_DEPLOYMENT ??= 'test-embedding-deployment';
+process.env.SSO_ISSUER ??= 'https://sso.test.example.com';
+process.env.SSO_CLIENT_ID ??= 'test-sso-client-id';

@@ -199,6 +199,9 @@ obscurely later when a value is first read.
 | `AZURE_OPENAI2_GPT_5_1_DEPLOYMENT` | **yes** | Deployment name, not model name |
 | `AZURE_OPENAI2_EMBEDDING_DEPLOYMENT` | **yes** | Deployment name for `text-embedding-3-large`, the only embedding model deployed |
 | `AZURE_OPENAI_DEFAULT_CHAT_MODEL` | no (default `gpt-4.1`) | One of `gpt-4.1` \| `gpt-5` \| `o4-mini` \| `gpt-4.1-mini` \| `gpt-5.1`; used when a caller doesn't pick a model at runtime |
+| `SSO_ISSUER` | **yes** | OIDC issuer URL; `JwtAuthGuard` fetches `{SSO_ISSUER}/.well-known/openid-configuration` to find the JWKS |
+| `SSO_CLIENT_ID` | **yes** | Expected `aud` claim on the verified token |
+| `SSO_COOKIE_NAME` | no (default `idToken`) | Cookie `JwtAuthGuard` reads the bearer token from (not the `Authorization` header) |
 | `AZURE_KEY_VAULT_URL` | no | Set to enable Key Vault secret resolution — see below |
 | `AZURE_KEY_VAULT_TENANT_ID` | no | Required together with the other three `AZURE_KEY_VAULT_*` vars |
 | `AZURE_KEY_VAULT_CLIENT_ID` | no | Service principal client ID |
