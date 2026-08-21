@@ -1,14 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import {
-  createRemoteJWKSet,
-  decodeJwt,
-  jwtVerify,
-  JWTPayload,
-  RemoteJWKSet,
-} from 'jose';
+import { createRemoteJWKSet, jwtVerify, JWTPayload, RemoteJWKSet } from 'jose';
 import { PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../config/config.service';
 import { OIDC_DISCOVERY_PATH } from '../constants';
+import { previewToken, safeDecodeClaims } from './token-debug.util';
 
 interface OidcDiscoveryDocument {
   jwks_uri: string;
@@ -39,7 +34,7 @@ export class JwtVerifierService {
   async verify(token: string): Promise<JWTPayload> {
     const { issuer, clientId } = this.config.sso;
     this.logger.debug(
-      { tokenPreview: this.preview(token) },
+      { tokenPreview: previewToken(token) },
       'Verifying SSO token',
     );
 
@@ -77,19 +72,11 @@ export class JwtVerifierService {
       // id living under "azp"/"client_id" instead of "aud") is visible
       // without decoding the token by hand.
       this.logger.debug(
-        { tokenClaims: this.safeDecodeClaims(token) },
+        { tokenClaims: safeDecodeClaims(token) },
         'Unverified claims of the token that failed verification',
       );
 
       throw error;
-    }
-  }
-
-  private safeDecodeClaims(token: string): JWTPayload | string {
-    try {
-      return decodeJwt(token);
-    } catch (error) {
-      return `unable to decode token: ${(error as Error).message}`;
     }
   }
 
@@ -146,11 +133,5 @@ export class JwtVerifierService {
     );
 
     return document.jwks_uri;
-  }
-
-  private preview(token: string): string {
-    return token.length > 12
-      ? `${token.slice(0, 12)}…(${token.length} chars)`
-      : token;
   }
 }

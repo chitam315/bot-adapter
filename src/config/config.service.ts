@@ -106,4 +106,20 @@ export class AppConfigService {
       cookieName: this.configService.get('SSO_COOKIE_NAME', { infer: true }),
     };
   }
+
+  get aiaPlus() {
+    const rawPem = this.configService.get('AIA_PLUS_PUBLIC_KEY_PEM', {
+      infer: true,
+    });
+
+    return {
+      // Supports both a real multi-line PEM (dotenv preserves newlines in a
+      // quoted multi-line value) and a flattened one using literal "\n" —
+      // the replace is a no-op when the value already has real newlines.
+      publicKeyPem: rawPem.replace(/\\n/g, '\n'),
+      cookieName: this.configService.get('AIA_PLUS_COOKIE_NAME', {
+        infer: true,
+      }),
+    };
+  }
 }

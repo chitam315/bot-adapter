@@ -16,6 +16,8 @@ describe('validateEnv', () => {
     AZURE_OPENAI2_EMBEDDING_DEPLOYMENT: 'sea-embedding-deployment',
     SSO_ISSUER: 'https://sso.example.com',
     SSO_CLIENT_ID: 'sso-client-id',
+    AIA_PLUS_PUBLIC_KEY_PEM:
+      '-----BEGIN PUBLIC KEY-----\ntest-key\n-----END PUBLIC KEY-----',
   };
 
   it('returns typed, defaulted config for valid input', () => {
@@ -27,6 +29,7 @@ describe('validateEnv', () => {
     expect(env.DATABASE_URL).toBe(validConfig.DATABASE_URL);
     expect(env.AZURE_OPENAI_DEFAULT_CHAT_MODEL).toBe(AzureChatModel.Gpt41);
     expect(env.SSO_COOKIE_NAME).toBe('idToken');
+    expect(env.AIA_PLUS_COOKIE_NAME).toBe('myaiaAccessToken');
   });
 
   it('accepts an explicit default chat model', () => {

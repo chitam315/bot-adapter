@@ -202,6 +202,8 @@ obscurely later when a value is first read.
 | `SSO_ISSUER` | **yes** | OIDC issuer URL; `JwtAuthGuard` fetches `{SSO_ISSUER}/.well-known/openid-configuration` to find the JWKS |
 | `SSO_CLIENT_ID` | **yes** | Expected `aud` claim on the verified token |
 | `SSO_COOKIE_NAME` | no (default `idToken`) | Cookie `JwtAuthGuard` reads the bearer token from (not the `Authorization` header) |
+| `AIA_PLUS_PUBLIC_KEY_PEM` | **yes** | RSA public key (SPKI/PEM) `AiaPlusAuthGuard` verifies tokens against — a fixed key, not a JWKS; see `AiaPlusJwtVerifierService`. Real multi-line PEM or literal `\n` both work |
+| `AIA_PLUS_COOKIE_NAME` | no (default `myaiaAccessToken`) | Cookie `AiaPlusAuthGuard` reads the AIA+ token from |
 | `AZURE_KEY_VAULT_URL` | no | Set to enable Key Vault secret resolution — see below |
 | `AZURE_KEY_VAULT_TENANT_ID` | no | Required together with the other three `AZURE_KEY_VAULT_*` vars |
 | `AZURE_KEY_VAULT_CLIENT_ID` | no | Service principal client ID |

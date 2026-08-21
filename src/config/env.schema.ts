@@ -65,6 +65,14 @@ export const envSchema = z.object({
   SSO_ISSUER: z.string().url('SSO_ISSUER must be a valid URL'),
   SSO_CLIENT_ID: z.string().min(1, 'SSO_CLIENT_ID is required'),
   SSO_COOKIE_NAME: z.string().min(1).default('idToken'),
+
+  // AIA+ integration — verifies the token in the AIA_PLUS_COOKIE_NAME cookie
+  // against a fixed RSA public key (not a JWKS), see AiaPlusJwtVerifierService.
+  // PEM value: paste with literal "\n" for line breaks if kept on one .env line.
+  AIA_PLUS_PUBLIC_KEY_PEM: z
+    .string()
+    .min(1, 'AIA_PLUS_PUBLIC_KEY_PEM is required'),
+  AIA_PLUS_COOKIE_NAME: z.string().min(1).default('myaiaAccessToken'),
 });
 
 export type Env = z.infer<typeof envSchema>;

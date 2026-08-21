@@ -30,6 +30,9 @@ describe('AppConfigService', () => {
     SSO_ISSUER: 'https://sso.example.com',
     SSO_CLIENT_ID: 'sso-client-id',
     SSO_COOKIE_NAME: 'idToken',
+    AIA_PLUS_PUBLIC_KEY_PEM:
+      '-----BEGIN PUBLIC KEY-----\\ntest-key\\n-----END PUBLIC KEY-----',
+    AIA_PLUS_COOKIE_NAME: 'myaiaAccessToken',
   };
 
   beforeEach(async () => {
@@ -85,6 +88,14 @@ describe('AppConfigService', () => {
       issuer: env.SSO_ISSUER,
       clientId: env.SSO_CLIENT_ID,
       cookieName: env.SSO_COOKIE_NAME,
+    });
+  });
+
+  it('unescapes literal "\\n" sequences in the AIA+ public key PEM', () => {
+    expect(service.aiaPlus).toEqual({
+      publicKeyPem:
+        '-----BEGIN PUBLIC KEY-----\ntest-key\n-----END PUBLIC KEY-----',
+      cookieName: env.AIA_PLUS_COOKIE_NAME,
     });
   });
 });
