@@ -1,4 +1,5 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../config/config.service';
 import { AuthenticatedRequest, JwtAuthGuard } from './jwt-auth.guard';
 import { JwtVerifierService } from './jwt-verifier.service';
@@ -10,6 +11,13 @@ describe('JwtAuthGuard', () => {
         getRequest: () => request,
       }),
     }) as ExecutionContext;
+
+  const buildLogger = () =>
+    ({
+      setContext: jest.fn(),
+      debug: jest.fn(),
+      warn: jest.fn(),
+    }) as unknown as PinoLogger;
 
   const config = {
     sso: {
@@ -24,6 +32,7 @@ describe('JwtAuthGuard', () => {
     const guard = new JwtAuthGuard(
       { verify } as unknown as JwtVerifierService,
       config,
+      buildLogger(),
     );
     const context = buildContext({ cookies: {} });
 
@@ -38,6 +47,7 @@ describe('JwtAuthGuard', () => {
     const guard = new JwtAuthGuard(
       { verify } as unknown as JwtVerifierService,
       config,
+      buildLogger(),
     );
     const context = buildContext({ cookies: { idToken: 'bad.token.here' } });
 
@@ -53,6 +63,7 @@ describe('JwtAuthGuard', () => {
     const guard = new JwtAuthGuard(
       { verify } as unknown as JwtVerifierService,
       config,
+      buildLogger(),
     );
     const request = {
       cookies: { idToken: 'good.token.here' },

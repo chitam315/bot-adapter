@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../config/config.service';
 import { JwtVerifierService } from './jwt-verifier.service';
 
@@ -12,6 +13,13 @@ describe('JwtVerifierService', () => {
   let config: AppConfigService;
   let fetchMock: jest.Mock;
   const fakeJwks = { fake: 'jwks' };
+
+  const buildLogger = () =>
+    ({
+      setContext: jest.fn(),
+      debug: jest.fn(),
+      warn: jest.fn(),
+    }) as unknown as PinoLogger;
 
   beforeEach(() => {
     jest.mocked(createRemoteJWKSet).mockClear();
@@ -39,7 +47,7 @@ describe('JwtVerifierService', () => {
       .mocked(jwtVerify)
       .mockResolvedValue({ payload: { sub: 'user-1' } } as never);
 
-    service = new JwtVerifierService(config);
+    service = new JwtVerifierService(config, buildLogger());
   });
 
   it('discovers the JWKS URI from the issuer and verifies the token against it', async () => {
