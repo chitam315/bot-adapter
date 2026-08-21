@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, decodeJwt, jwtVerify } from 'jose';
 import { PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../config/config.service';
 import { JwtVerifierService } from './jwt-verifier.service';
@@ -6,24 +6,24 @@ import { JwtVerifierService } from './jwt-verifier.service';
 jest.mock('jose', () => ({
   createRemoteJWKSet: jest.fn(),
   jwtVerify: jest.fn(),
+  decodeJwt: jest.fn(),
 }));
 
 describe('JwtVerifierService', () => {
   let service: JwtVerifierService;
   let config: AppConfigService;
   let fetchMock: jest.Mock;
+  let logger: ReturnType<typeof buildLogger>;
   const fakeJwks = { fake: 'jwks' };
 
-  const buildLogger = () =>
-    ({
-      setContext: jest.fn(),
-      debug: jest.fn(),
-      warn: jest.fn(),
-    }) as unknown as PinoLogger;
+  function buildLogger() {
+    return { setContext: jest.fn(), debug: jest.fn(), warn: jest.fn() };
+  }
 
   beforeEach(() => {
     jest.mocked(createRemoteJWKSet).mockClear();
     jest.mocked(jwtVerify).mockClear();
+    jest.mocked(decodeJwt).mockClear();
 
     config = {
       sso: {
@@ -47,7 +47,8 @@ describe('JwtVerifierService', () => {
       .mocked(jwtVerify)
       .mockResolvedValue({ payload: { sub: 'user-1' } } as never);
 
-    service = new JwtVerifierService(config, buildLogger());
+    logger = buildLogger();
+    service = new JwtVerifierService(config, logger as unknown as PinoLogger);
   });
 
   it('discovers the JWKS URI from the issuer and verifies the token against it', async () => {
@@ -96,6 +97,37 @@ describe('JwtVerifierService', () => {
 
     await expect(service.verify('a.b.c')).rejects.toThrow(
       'signature verification failed',
+    );
+  });
+
+  it('debug-logs the unverified token claims when jwtVerify fails, to help diagnose claim-shape mismatches', async () => {
+    jest
+      .mocked(jwtVerify)
+      .mockRejectedValue(new Error('missing required "aud" claim'));
+    jest
+      .mocked(decodeJwt)
+      .mockReturnValue({ sub: 'user-1', azp: 'client-123' });
+
+    await expect(service.verify('a.b.c')).rejects.toThrow();
+
+    expect(decodeJwt).toHaveBeenCalledWith('a.b.c');
+    expect(logger.debug).toHaveBeenCalledWith(
+      { tokenClaims: { sub: 'user-1', azp: 'client-123' } },
+      'Unverified claims of the token that failed verification',
+    );
+  });
+
+  it('falls back to an explanatory string instead of throwing when the token cannot even be decoded', async () => {
+    jest.mocked(jwtVerify).mockRejectedValue(new Error('invalid token'));
+    jest.mocked(decodeJwt).mockImplementation(() => {
+      throw new Error('Invalid Compact JWS');
+    });
+
+    await expect(service.verify('not-a-jwt')).rejects.toThrow('invalid token');
+
+    expect(logger.debug).toHaveBeenCalledWith(
+      { tokenClaims: 'unable to decode token: Invalid Compact JWS' },
+      'Unverified claims of the token that failed verification',
     );
   });
 });

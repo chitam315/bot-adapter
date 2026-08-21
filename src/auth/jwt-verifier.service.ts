@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { createRemoteJWKSet, jwtVerify, JWTPayload, RemoteJWKSet } from 'jose';
+import {
+  createRemoteJWKSet,
+  decodeJwt,
+  jwtVerify,
+  JWTPayload,
+  RemoteJWKSet,
+} from 'jose';
 import { PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../config/config.service';
 import { OIDC_DISCOVERY_PATH } from '../constants';
@@ -64,7 +70,26 @@ export class JwtVerifierService {
         { err: error as Error, issuer, audience: clientId },
         'jwtVerify failed',
       );
+
+      // Debug-only (not warn — this is unverified token content, potentially
+      // PII, and shouldn't land in logs on every routine auth failure): dump
+      // the token's actual claims so a claim-shape mismatch (e.g. the client
+      // id living under "azp"/"client_id" instead of "aud") is visible
+      // without decoding the token by hand.
+      this.logger.debug(
+        { tokenClaims: this.safeDecodeClaims(token) },
+        'Unverified claims of the token that failed verification',
+      );
+
       throw error;
+    }
+  }
+
+  private safeDecodeClaims(token: string): JWTPayload | string {
+    try {
+      return decodeJwt(token);
+    } catch (error) {
+      return `unable to decode token: ${(error as Error).message}`;
     }
   }
 
