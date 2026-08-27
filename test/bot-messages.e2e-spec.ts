@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TestAdapter, TurnContext } from 'botbuilder';
+import { ConversationReference, TestAdapter, TurnContext } from 'botbuilder';
 import { Request, Response } from 'express';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
@@ -10,7 +10,20 @@ import { BOT_ADAPTER, DRIZZLE, PG_POOL } from '../src/constants';
 
 describe('Bot messages (e2e)', () => {
   let app: INestApplication<App>;
-  const generateReply = jest.fn().mockResolvedValue('This is a stubbed reply.');
+
+  // BotActivityHandler now calls generateReply from a fire-and-forget
+  // background task (see the comment on handleMessage), so the response to
+  // POST /api/messages resolves *before* generateReply necessarily has —
+  // this promise lets the test wait for the actual call deterministically
+  // instead of racing it with an arbitrary sleep.
+  let resolveGenerateReplyCalled: () => void;
+  const generateReplyCalled = new Promise<void>((resolve) => {
+    resolveGenerateReplyCalled = resolve;
+  });
+  const generateReply = jest.fn().mockImplementation(() => {
+    resolveGenerateReplyCalled();
+    return Promise.resolve('This is a stubbed reply.');
+  });
 
   beforeAll(async () => {
     const pool = {
@@ -25,15 +38,37 @@ describe('Bot messages (e2e)', () => {
     // process. Route through botbuilder's own TestAdapter instead, so this
     // still exercises the real BotActivityHandler dispatch logic and the
     // full DI graph, without a live channel.
+    //
+    // BotActivityHandler now delivers replies via continueConversationAsync
+    // (fire-and-forget from the inbound turn — see the comment on
+    // handleMessage), not through the same call stack `process()` is on. One
+    // shared TestAdapter, reused by both `process` and
+    // `continueConversationAsync` below, keeps inbound dispatch and the
+    // later proactive reply on the same simulated channel.
+    let currentLogic: (context: TurnContext) => Promise<void>;
+    const testAdapter = new TestAdapter((context) => currentLogic(context));
+
     const botAdapterStub = {
       process: async (
         req: Request,
         res: Response,
         logic: (context: TurnContext) => Promise<void>,
       ) => {
-        const testAdapter = new TestAdapter(logic);
+        currentLogic = logic;
         await testAdapter.receiveActivity(req.body as Record<string, unknown>);
         res.status(200).json({});
+      },
+      continueConversationAsync: async (
+        _botAppId: string,
+        reference: Partial<ConversationReference>,
+        logic: (context: TurnContext) => Promise<void>,
+      ) => {
+        const activity = TurnContext.applyConversationReference(
+          { type: 'event', name: 'continueConversation' },
+          reference,
+          true,
+        );
+        await logic(new TurnContext(testAdapter, activity));
       },
     };
 
@@ -75,6 +110,8 @@ describe('Bot messages (e2e)', () => {
       .post('/api/messages')
       .send(activity)
       .expect(200);
+
+    await generateReplyCalled;
 
     expect(generateReply).toHaveBeenCalledWith(
       expect.objectContaining({ text: 'hello there' }),
