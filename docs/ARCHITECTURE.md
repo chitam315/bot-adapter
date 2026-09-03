@@ -92,7 +92,7 @@ follow-up tool calls if the first search doesn't answer the question.
 
 **To add a new tool:**
 1. Write a factory function returning `tool({ description, inputSchema: z.object({...}), execute })` (see `knowledge-base.tool.ts` for the pattern).
-2. Register it as a provider in `ai.module.ts` behind its own `Symbol` token (see `KNOWLEDGE_BASE_TOOL` in [ai.constants.ts](../src/ai/ai.constants.ts)).
+2. Register it as a provider in `ai.module.ts` behind its own `Symbol` token (see `KNOWLEDGE_BASE_TOOL` in [ai.constants.ts](../src/constants/ai.constants.ts) — all DI tokens/constants live under `src/constants/`, not next to the module that uses them).
 3. Inject it into `GenerationService` and add it to the `tools: {...}` map passed to `generateText`.
 
 Write the `description` for the *model*, not for a human reader — it's the
@@ -127,7 +127,7 @@ nest g controller my-feature   # only if it exposes HTTP endpoints
 ```
 
 Then:
-- If it needs the database, `imports: [DatabaseModule]` and inject `DRIZZLE` (or `PG_POOL` for raw SQL) from [database.constants.ts](../src/database/database.constants.ts).
+- If it needs the database, `imports: [DatabaseModule]` and inject `DRIZZLE` (or `PG_POOL` for raw SQL) from [database.constants.ts](../src/constants/database.constants.ts).
 - If it exposes an HTTP endpoint with a request body, validate it with a zod schema (see §9 — this repo uses zod uniformly, not `class-validator`).
 - Add unit specs co-located as `*.spec.ts`. Only add e2e coverage in `test/` if the feature needs a full app boot to test meaningfully (e.g. it's a new HTTP endpoint).
 - Wire the module into `AppModule` only if nothing else already imports it transitively — check the module map in §1 first.
@@ -304,14 +304,21 @@ Two separate paths, because they occur at different points in the request lifecy
   and logged. Throw a standard Nest `HttpException` subclass for expected
   error cases (`BadRequestException`, etc.) — the filter extracts its message
   automatically.
-- **Bot turn processing path**: once `CloudAdapter.process` hands control to
-  the activity handler, an HTTP response may already be in flight, so errors
-  there are caught by `adapter.onTurnError`
-  ([bot-framework-adapter.provider.ts](../src/bot/bot-framework-adapter.provider.ts)),
-  which logs and sends a fallback Teams message instead. `BotActivityHandler`
-  additionally wraps its own `GenerationService` call in a try/catch so a
-  failed LLM call degrades to a friendly in-chat message rather than a silent
-  failure or an unrelated Teams-side error.
+- **Bot turn processing path**: `BotActivityHandler.handleMessage` ACKs the
+  inbound webhook immediately (fire-and-forget — see the comment on
+  `handleMessage` in
+  [teams-activity-handler.ts](../src/bot/teams-activity-handler.ts)) and does
+  the real work (`GenerationService` call, sending the reply) in a detached
+  background task delivered via `continueConversationAsync`, a *proactive*
+  message outside the original turn's lifecycle. Because of that,
+  `adapter.onTurnError`
+  ([bot-framework-adapter.provider.ts](../src/bot/bot-framework-adapter.provider.ts))
+  no longer catches errors from that background work — it only covers
+  errors during the (now much shorter) synchronous part of turn dispatch.
+  The background task has its own try/catch: a failed `GenerationService`
+  call degrades to a friendly in-chat fallback message, and any other
+  unhandled error in that task is caught and logged directly in
+  `handleMessage` rather than propagating anywhere.
 
 ## 12. Testing conventions
 

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  Activity,
   ActivityTypes,
   CloudAdapter,
   ConversationState,
@@ -12,9 +13,15 @@ import { PinoLogger } from 'nestjs-pino';
 import { ConversationTurn, GenerationService } from '../ai/generation.service';
 import { AppConfigService } from '../config/config.service';
 import {
+  ConversationLoggingService,
+  TeamsConversationInput,
+  TeamsUserInput,
+} from '../conversation-logging/conversation-logging.service';
+import {
   BOT_ADAPTER,
   BOT_STORAGE,
   HISTORY_STATE_KEY,
+  LlmCallStatus,
   MAX_HISTORY_TURNS,
   TYPING_INDICATOR_INTERVAL_MS,
 } from '../constants';
@@ -34,6 +41,7 @@ export class BotActivityHandler extends TeamsActivityHandler {
     private readonly generationService: GenerationService,
     private readonly config: AppConfigService,
     private readonly logger: PinoLogger,
+    private readonly conversationLoggingService: ConversationLoggingService,
   ) {
     super();
     this.logger.setContext(BotActivityHandler.name);
@@ -106,13 +114,13 @@ export class BotActivityHandler extends TeamsActivityHandler {
     userText: string,
   ): Promise<void> {
     const history = await this.historyProperty.get(context, []);
+    const { activity } = context;
 
-    let replyText: string;
+    let result: Awaited<ReturnType<GenerationService['generateReply']>>;
     try {
       // TEMP: artificial delay to manually verify the ACK-fast + proactive
       // reply fix on Emulator — remove before deploying.
-      await new Promise((resolve) => setTimeout(resolve, 30_000));
-      replyText = await this.withTypingIndicator(context, () =>
+      result = await this.withTypingIndicator(context, () =>
         this.generationService.generateReply({
           text: userText,
           history,
@@ -120,6 +128,20 @@ export class BotActivityHandler extends TeamsActivityHandler {
       );
     } catch (error) {
       this.logger.error({ err: error as Error }, 'Failed to generate a reply');
+
+      // Fire-and-forget: logTurn never throws (see
+      // ConversationLoggingService), and the fallback reply below has
+      // already been decided regardless of whether this write succeeds.
+      void this.conversationLoggingService.logTurn({
+        user: this.toTeamsUserInput(activity),
+        conversation: this.toTeamsConversationInput(activity),
+        activityId: activity.id,
+        userMessage: userText,
+        model: this.config.azureOpenAi.defaultChatModel,
+        status: LlmCallStatus.Error,
+        errorMessage: (error as Error).message,
+      });
+
       await context.sendActivity({
         type: ActivityTypes.Message,
         text: 'This is fake message for testing error handling. The real message would be: Sorry, I encountered an error while generating a reply. Please try again later.',
@@ -130,7 +152,7 @@ export class BotActivityHandler extends TeamsActivityHandler {
     const fullHistory: ConversationTurn[] = [
       ...history,
       { role: 'user', content: userText },
-      { role: 'assistant', content: replyText },
+      { role: 'assistant', content: result.text },
     ];
     const updatedHistory = fullHistory.slice(-MAX_HISTORY_TURNS);
 
@@ -139,8 +161,39 @@ export class BotActivityHandler extends TeamsActivityHandler {
 
     await context.sendActivity({
       type: ActivityTypes.Message,
-      text: replyText,
+      text: result.text,
     });
+
+    // Fire-and-forget, after the reply is already on its way to the user —
+    // a slow or failing DB write here must never delay or affect the turn.
+    void this.conversationLoggingService.logTurn({
+      user: this.toTeamsUserInput(activity),
+      conversation: this.toTeamsConversationInput(activity),
+      activityId: activity.id,
+      userMessage: userText,
+      model: result.model,
+      latencyMs: result.latencyMs,
+      toolCalls: result.toolCalls,
+      status: LlmCallStatus.Success,
+      assistantMessage: result.text,
+      usage: result.usage,
+    });
+  }
+
+  private toTeamsUserInput(activity: Activity): TeamsUserInput {
+    return {
+      teamsUserId: activity.from.id,
+      aadObjectId: activity.from.aadObjectId,
+      tenantId: activity.conversation.tenantId,
+      name: activity.from.name,
+    };
+  }
+
+  private toTeamsConversationInput(activity: Activity): TeamsConversationInput {
+    return {
+      channelConversationId: activity.conversation.id,
+      channelId: activity.channelId,
+    };
   }
 
   /**

@@ -28,3 +28,15 @@ this app reads or writes them.
 - **`npm run db:generate` + `npm run db:migrate`** — diffs `schema.ts` against migration history in `drizzle/`, generates SQL, then applies it. Use this for any environment where you want a reviewable, versioned migration trail (staging/production).
 
 `DATABASE_URL` in `.env` decides which database either command targets.
+
+## bot-adapter's own tables (`bot_adapter` schema)
+
+`bot-adapter.schema.ts` and `bot-adapter.relations.ts` are the one exception
+to "never hand-author" above. They hold bot-adapter's own tables
+(`bot_adapter.users`, `bot_adapter.conversations`, `bot_adapter.llm_calls`)
+in a dedicated Postgres schema inside the same database — not the other
+app's `public` schema, so there's no naming collision with their
+`users`/`chats`/`messages`/`llmCalls` tables and `db:generate` never emits
+statements touching their tables. Edit these two files directly and run
+`npm run db:generate` + `npm run db:migrate` as usual; they're not
+introspected and `db:pull` never touches them.

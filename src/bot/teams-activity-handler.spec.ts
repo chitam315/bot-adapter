@@ -8,6 +8,7 @@ import {
 import { PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../config/config.service';
 import { GenerationService } from '../ai/generation.service';
+import { ConversationLoggingService } from '../conversation-logging/conversation-logging.service';
 import { BotActivityHandler } from './teams-activity-handler';
 
 describe('BotActivityHandler', () => {
@@ -22,7 +23,12 @@ describe('BotActivityHandler', () => {
 
   const config = {
     botFramework: { appId: 'test-app-id' },
+    azureOpenAi: { defaultChatModel: 'gpt-4.1' },
   } as unknown as AppConfigService;
+
+  const buildConversationLogging = () => ({
+    logTurn: jest.fn().mockResolvedValue(undefined),
+  });
 
   /**
    * BotActivityHandler now delivers replies via continueConversationAsync on
@@ -53,6 +59,9 @@ describe('BotActivityHandler', () => {
   const buildHandlerAndAdapter = (
     generationService: GenerationService,
     logger: ReturnType<typeof buildLogger>,
+    conversationLogging: ReturnType<
+      typeof buildConversationLogging
+    > = buildConversationLogging(),
   ) => {
     // Forward reference: testAdapter's closure needs `handler`, but
     // `handler`'s constructor needs `testAdapter` — can't be const.
@@ -65,14 +74,21 @@ describe('BotActivityHandler', () => {
       generationService,
       config,
       asLogger(logger),
+      conversationLogging as unknown as ConversationLoggingService,
     );
-    return { handler, testAdapter };
+    return { handler, testAdapter, conversationLogging };
   };
 
-  it('shows typing then replies with the generated text', async () => {
-    const generateReply = jest.fn().mockResolvedValue('42 is the answer.');
+  it('shows typing then replies with the generated text, and logs the turn', async () => {
+    const generateReply = jest.fn().mockResolvedValue({
+      text: '42 is the answer.',
+      model: 'gpt-4.1',
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+      toolCalls: ['searchKnowledgeBase'],
+      latencyMs: 250,
+    });
     const generationService = { generateReply } as unknown as GenerationService;
-    const { testAdapter } = buildHandlerAndAdapter(
+    const { testAdapter, conversationLogging } = buildHandlerAndAdapter(
       generationService,
       buildLogger(),
     );
@@ -86,10 +102,26 @@ describe('BotActivityHandler', () => {
       text: 'what is the answer?',
       history: [],
     });
+
+    expect(conversationLogging.logTurn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userMessage: 'what is the answer?',
+        assistantMessage: '42 is the answer.',
+        model: 'gpt-4.1',
+        status: 'success',
+        toolCalls: ['searchKnowledgeBase'],
+      }),
+    );
   });
 
   it('carries prior turns as history on the next message', async () => {
-    const generateReply = jest.fn().mockResolvedValue('Follow-up answer.');
+    const generateReply = jest.fn().mockResolvedValue({
+      text: 'Follow-up answer.',
+      model: 'gpt-4.1',
+      usage: {},
+      toolCalls: [],
+      latencyMs: 100,
+    });
     const generationService = { generateReply } as unknown as GenerationService;
     const { testAdapter } = buildHandlerAndAdapter(
       generationService,
@@ -113,22 +145,32 @@ describe('BotActivityHandler', () => {
     });
   });
 
-  it('sends a fallback message when generation fails', async () => {
+  it('sends a fallback message and logs an error turn when generation fails', async () => {
     const generateReply = jest
       .fn()
       .mockRejectedValue(new Error('LLM unavailable'));
     const logger = buildLogger();
     const generationService = { generateReply } as unknown as GenerationService;
-    const { testAdapter } = buildHandlerAndAdapter(generationService, logger);
+    const { testAdapter, conversationLogging } = buildHandlerAndAdapter(
+      generationService,
+      logger,
+    );
 
     await testAdapter
       .send('hello')
       .assertReply(() => undefined)
       .assertReply(
-        'Sorry, something went wrong while I was thinking about that. Please try again.',
+        'This is fake message for testing error handling. The real message would be: Sorry, I encountered an error while generating a reply. Please try again later.',
       );
 
     expect(logger.error).toHaveBeenCalled();
+    expect(conversationLogging.logTurn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userMessage: 'hello',
+        status: 'error',
+        errorMessage: 'LLM unavailable',
+      }),
+    );
   });
 
   it('greets new members without calling the generation service', async () => {
