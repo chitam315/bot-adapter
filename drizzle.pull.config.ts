@@ -17,6 +17,11 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL,
   },
+  // db:pull's whole job is refreshing schema.ts, the mirror of the other
+  // app's `public` schema — explicit here (matches drizzle-kit's own
+  // default) so it never accidentally starts introspecting `bot_adapter`
+  // too, which owns its tables via drizzle.config.ts's schemaFilter instead.
+  schemaFilter: ['public'],
   strict: true,
   verbose: true,
 });
