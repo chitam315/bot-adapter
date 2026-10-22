@@ -6,3 +6,6 @@ Postgres knowledge base (Drizzle ORM). **Read
 non-trivial changes** — it's the canonical reference (module map, request
 flow, env vars, DB schema workflow, testing conventions, deployment notes)
 and takes precedence over `.claude/rules/` for anything the two disagree on.
+For the Azure resource topology (Bot Service, App Registration, Azure
+OpenAI, Azure Database for PostgreSQL) and how they authenticate with each
+other, see [docs/AZURE_ARCHITECTURE.md](../../docs/AZURE_ARCHITECTURE.md).

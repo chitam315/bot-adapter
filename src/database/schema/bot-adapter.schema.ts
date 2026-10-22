@@ -28,6 +28,7 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
   jsonb,
   index,
   foreignKey,
@@ -66,6 +67,15 @@ export const botUsers = botAdapterSchema.table(
 
     // context.activity.from.name — display name as Teams reports it.
     name: text(),
+
+    // Fetched once via TeamsInfo.getMember(context, teamsUserId) the first
+    // time this user is seen (not re-fetched on later turns — see
+    // BotActivityHandler.enrichTeamsProfile). Stay null against the Bot
+    // Framework Emulator, which has no real tenant to resolve these from.
+    email: text(),
+    givenName: text(),
+    surname: text(),
+    userPrincipalName: text(),
   },
   (table) => [
     unique('bot_users_teams_user_id_unique').on(table.teamsUserId),
@@ -106,6 +116,23 @@ export const botConversations = botAdapterSchema.table(
     status: text().default('active').notNull(),
 
     lastMessageAt: timestamp({ withTimezone: true, mode: 'string' }),
+
+    // The rest of these are free — no extra API call, sourced straight off
+    // the activity — and refreshed on every turn (unlike the users.email/
+    // etc. profile fields below, which are fetched once and kept).
+    // context.activity.conversation.conversationType ('personal' |
+    // 'groupChat' | 'channel' on Teams).
+    conversationType: text(),
+    // context.activity.conversation.isGroup
+    isGroup: boolean(),
+    // context.activity.locale
+    locale: text(),
+    // (context.activity.channelData as TeamsChannelData).team — absent for
+    // 1:1 personal chat, the common case for this bot.
+    teamId: text(),
+    teamName: text(),
+    // (context.activity.channelData as TeamsChannelData).channel?.name
+    channelName: text(),
   },
   (table) => [
     unique('bot_conversations_channel_conversation_id_unique').on(
@@ -125,12 +152,56 @@ export const botConversations = botAdapterSchema.table(
 );
 
 /**
- * One row per Teams turn that reached GenerationService.generateReply —
- * both the user/assistant text for that turn and the LLM call's token/
- * latency metrics. Merged into one table (rather than separate `messages`
- * + `llmCalls` tables like the other app's schema) because this bot makes
- * exactly one generateText call per turn today — split them apart later if
- * that stops being true (e.g. multi-message batching per turn).
+ * One row per user or assistant message. Split out from llmCalls (which
+ * used to carry userMessage/assistantMessage text columns directly) so a
+ * turn's text and its LLM-call telemetry are independently queryable, and
+ * so generateTextLogged (see ConversationLoggingService) can be called by
+ * anything invoking generateText — not just a Teams turn — without forcing
+ * a text column onto every llmCalls row.
+ */
+export const botMessages = botAdapterSchema.table(
+  'messages',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+
+    createdAt: timestamp({ withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
+
+    conversationId: uuid().notNull(),
+
+    // ConversationLoggingConstants.MessageRole
+    role: text().notNull(),
+
+    content: text().notNull(),
+
+    // context.activity.id — set on the user's message; the assistant's
+    // reply doesn't have its own inbound activity id.
+    activityId: text(),
+  },
+  (table) => [
+    index().using(
+      'btree',
+      table.conversationId.asc().nullsLast(),
+      table.createdAt.asc().nullsLast(),
+    ),
+
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [botConversations.id],
+      name: 'bot_messages_conversation_id_bot_conversations_id_fk',
+    }).onDelete('cascade'),
+  ],
+);
+
+/**
+ * One row per generateTextLogged call (see ConversationLoggingService) —
+ * the LLM call's token/latency metrics, linked to the message row(s) it
+ * produced. conversationId/userId/userMessageId/assistantMessageId are all
+ * nullable so this table can log a call made outside a Teams conversation
+ * too (e.g. a future HTTP-triggered generateText call) — generateTextLogged
+ * is meant to be the only sanctioned way to call generateText anywhere in
+ * this codebase, Teams or not.
  */
 export const botLlmCalls = botAdapterSchema.table(
   'llmCalls',
@@ -141,23 +212,31 @@ export const botLlmCalls = botAdapterSchema.table(
       .defaultNow()
       .notNull(),
 
-    conversationId: uuid().notNull(),
+    conversationId: uuid(),
 
     // Denormalized off conversations.userId — avoids a join for per-user
     // analytics (token usage by user, turns per user, etc.).
-    userId: uuid().notNull(),
+    userId: uuid(),
+
+    userMessageId: uuid(),
+    // Null on an errored call, or when the caller has no message to link.
+    assistantMessageId: uuid(),
 
     // context.activity.id of the inbound message activity — correlates a
     // row back to the exact Teams activity, and helps dedupe if the
     // channel ever redelivers.
     activityId: text(),
 
-    userMessage: text().notNull(),
-    assistantMessage: text(),
-
     // AzureChatModel key (e.g. 'gpt-4.1'), not the raw Azure deployment
     // name — see src/constants/azure-openai.constants.ts.
     model: text().notNull(),
+
+    // What this call was for, e.g. ["chat-reply"] — generateTextLogged is
+    // called for more than just answering a Teams message (summarization,
+    // extraction, etc. are expected to reuse it too), so this is what
+    // distinguishes those rows from each other. Caller-supplied, not a
+    // closed enum — jsonb array, same reasoning as toolCalls below.
+    purposes: jsonb().default([]),
 
     // ConversationLoggingConstants.LlmCallStatus
     status: text().notNull(),
@@ -199,6 +278,18 @@ export const botLlmCalls = botAdapterSchema.table(
       columns: [table.userId],
       foreignColumns: [botUsers.id],
       name: 'bot_llm_calls_user_id_bot_users_id_fk',
+    }).onDelete('cascade'),
+
+    foreignKey({
+      columns: [table.userMessageId],
+      foreignColumns: [botMessages.id],
+      name: 'bot_llm_calls_user_message_id_bot_messages_id_fk',
+    }).onDelete('cascade'),
+
+    foreignKey({
+      columns: [table.assistantMessageId],
+      foreignColumns: [botMessages.id],
+      name: 'bot_llm_calls_assistant_message_id_bot_messages_id_fk',
     }).onDelete('cascade'),
   ],
 );

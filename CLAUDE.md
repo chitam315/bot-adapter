@@ -12,6 +12,7 @@ Project instructions live in [`.claude/rules/`](.claude/rules/), split by topic:
 - [`azure-openai.md`](.claude/rules/azure-openai.md) — dual Azure OpenAI resources/models (`src/azure-openai/**`, `src/ai/**`)
 - [`auth.md`](.claude/rules/auth.md) — the two unrelated auth guards (`src/auth/**`)
 - [`conversation-logging.md`](.claude/rules/conversation-logging.md) — persisting Teams turns (`src/conversation-logging/**`)
+- [`database-schema.md`](.claude/rules/database-schema.md) — don't run drizzle-kit yourself after editing schema (`src/database/schema/**`, `drizzle*.config.ts`)
 - [`config-secrets.md`](.claude/rules/config-secrets.md) — zod env validation + Key Vault boot ordering (`src/config/**`, `src/azure-key-vault/**`)
 - [`testing.md`](.claude/rules/testing.md) — Jest/ESM-mocking gotchas (`**/*.spec.ts`, `test/**`)
 

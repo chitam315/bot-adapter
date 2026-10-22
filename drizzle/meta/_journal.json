@@ -8,6 +8,13 @@
       "when": 1787047551796,
       "tag": "0000_premium_menace",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788851059398,
+      "tag": "0001_naive_iron_patriot",
+      "breakpoints": true
     }
   ]
 }

@@ -1,13 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { generateText, ModelMessage, stepCountIs, Tool } from 'ai';
+import { ModelMessage, stepCountIs, Tool } from 'ai';
 import { AzureOpenAiProvider } from '../azure-openai/azure-openai.provider';
 import { AppConfigService } from '../config/config.service';
 import {
+  ConversationLoggingService,
+  GenerateTextLoggedContext,
+} from '../conversation-logging/conversation-logging.service';
+import {
   AzureChatModel,
+  CHAT_REPLY_PURPOSE,
   KNOWLEDGE_BASE_TOOL,
   MAX_STEPS,
   SYSTEM_PROMPT,
 } from '../constants';
+import { FlatUsage, mapToolCalls, mapUsage } from './generation.util';
 
 export interface ConversationTurn {
   role: 'user' | 'assistant';
@@ -19,18 +25,13 @@ export interface GenerateReplyInput {
   history?: ConversationTurn[];
   // Defaults to AppConfigService's AZURE_OPENAI_DEFAULT_CHAT_MODEL when omitted.
   model?: AzureChatModel;
+  // Ids already resolved by the caller (e.g. BotActivityHandler, ahead of
+  // this call) that generateTextLogged links its llmCalls row to. Omitted
+  // entirely by a caller with no Teams conversation.
+  loggingContext?: GenerateTextLoggedContext;
 }
 
-// Mirrors the ai SDK's LanguageModelUsage shape (see node_modules/ai's
-// GenerateTextResult['usage']) but flattened, since every field there is
-// `number | undefined` and ConversationLoggingService stores them flat.
-export interface GenerateReplyUsage {
-  inputTokens?: number;
-  cachedInputTokens?: number;
-  outputTokens?: number;
-  reasoningTokens?: number;
-  totalTokens?: number;
-}
+export type GenerateReplyUsage = FlatUsage;
 
 export interface GenerateReplyResult {
   text: string;
@@ -48,14 +49,16 @@ export interface GenerateReplyResult {
  * Orchestrates one Teams turn's reply generation. Returns metadata
  * (usage/tool calls/latency) alongside the text — see
  * docs/ARCHITECTURE.md for why Teams doesn't get token-by-token streaming
- * in this scaffold, and ConversationLoggingService for what consumes this
- * metadata.
+ * in this scaffold. The actual generateText call is made through
+ * ConversationLoggingService.generateTextLogged (not the ai SDK directly),
+ * which is what persists this turn's LLM call into bot_adapter.llmCalls.
  */
 @Injectable()
 export class GenerationService {
   constructor(
     private readonly azureOpenAi: AzureOpenAiProvider,
     private readonly config: AppConfigService,
+    private readonly conversationLoggingService: ConversationLoggingService,
     @Inject(KNOWLEDGE_BASE_TOOL) private readonly knowledgeBaseTool: Tool,
   ) {}
 
@@ -63,6 +66,7 @@ export class GenerationService {
     text,
     history = [],
     model,
+    loggingContext = {},
   }: GenerateReplyInput): Promise<GenerateReplyResult> {
     const resolvedModel = model ?? this.config.azureOpenAi.defaultChatModel;
 
@@ -75,26 +79,25 @@ export class GenerationService {
     ];
 
     const startedAt = Date.now();
-    const result = await generateText({
-      model: this.azureOpenAi.chatModel(resolvedModel),
-      system: SYSTEM_PROMPT,
-      messages,
-      tools: { searchKnowledgeBase: this.knowledgeBaseTool },
-      stopWhen: stepCountIs(MAX_STEPS),
-    });
+    const result = await this.conversationLoggingService.generateTextLogged(
+      {
+        modelKey: resolvedModel,
+        purposes: [CHAT_REPLY_PURPOSE],
+        model: this.azureOpenAi.chatModel(resolvedModel),
+        system: SYSTEM_PROMPT,
+        messages,
+        tools: { searchKnowledgeBase: this.knowledgeBaseTool },
+        stopWhen: stepCountIs(MAX_STEPS),
+      },
+      loggingContext,
+    );
     const latencyMs = Date.now() - startedAt;
 
     return {
       text: result.text,
       model: resolvedModel,
-      usage: {
-        inputTokens: result.usage?.inputTokens,
-        cachedInputTokens: result.usage?.inputTokenDetails?.cacheReadTokens,
-        outputTokens: result.usage?.outputTokens,
-        reasoningTokens: result.usage?.outputTokenDetails?.reasoningTokens,
-        totalTokens: result.usage?.totalTokens,
-      },
-      toolCalls: (result.toolCalls ?? []).map((call) => call.toolName),
+      usage: mapUsage(result.usage),
+      toolCalls: mapToolCalls(result.toolCalls),
       latencyMs,
     };
   }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { AzureOpenAiModule } from '../azure-openai/azure-openai.module';
+import { ConversationLoggingModule } from '../conversation-logging/conversation-logging.module';
 import { KnowledgeBaseModule } from '../knowledge-base/knowledge-base.module';
 import { KnowledgeBaseService } from '../knowledge-base/knowledge-base.service';
 import { KNOWLEDGE_BASE_TOOL } from '../constants';
@@ -9,7 +10,12 @@ import { GenerationService } from './generation.service';
 import { createKnowledgeBaseTool } from './tools/knowledge-base.tool';
 
 @Module({
-  imports: [AzureOpenAiModule, KnowledgeBaseModule, AuthModule],
+  imports: [
+    AzureOpenAiModule,
+    KnowledgeBaseModule,
+    AuthModule,
+    ConversationLoggingModule,
+  ],
   controllers: [AiController],
   providers: [
     {

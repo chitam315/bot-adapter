@@ -2,6 +2,7 @@ import {
   CloudAdapter,
   ConversationReference,
   MemoryStorage,
+  TeamsInfo,
   TestAdapter,
   TurnContext,
 } from 'botbuilder';
@@ -12,10 +13,15 @@ import { ConversationLoggingService } from '../conversation-logging/conversation
 import { BotActivityHandler } from './teams-activity-handler';
 
 describe('BotActivityHandler', () => {
+  const USER_ID = 'user-1';
+  const CONVERSATION_ID = 'conversation-1';
+  const USER_MESSAGE_ID = 'message-1';
+
   const buildLogger = () => ({
     setContext: jest.fn(),
     info: jest.fn(),
     debug: jest.fn(),
+    warn: jest.fn(),
     error: jest.fn(),
   });
   const asLogger = (logger: ReturnType<typeof buildLogger>) =>
@@ -26,8 +32,19 @@ describe('BotActivityHandler', () => {
     azureOpenAi: { defaultChatModel: 'gpt-4.1' },
   } as unknown as AppConfigService;
 
+  /**
+   * hasEnrichedProfile defaults to true so most tests never exercise the
+   * real TeamsInfo.getMember call (no live Bot Framework Connector in a
+   * TestAdapter-driven test) — the one test that cares about that path
+   * spies on TeamsInfo.getMember directly and sets this to false.
+   */
   const buildConversationLogging = () => ({
-    logTurn: jest.fn().mockResolvedValue(undefined),
+    hasEnrichedProfile: jest.fn().mockResolvedValue(true),
+    resolveUserAndConversation: jest.fn().mockResolvedValue({
+      userId: USER_ID,
+      conversationId: CONVERSATION_ID,
+    }),
+    logUserMessage: jest.fn().mockResolvedValue(USER_MESSAGE_ID),
   });
 
   /**
@@ -79,7 +96,7 @@ describe('BotActivityHandler', () => {
     return { handler, testAdapter, conversationLogging };
   };
 
-  it('shows typing then replies with the generated text, and logs the turn', async () => {
+  it('shows typing then replies with the generated text, resolving identity before generating', async () => {
     const generateReply = jest.fn().mockResolvedValue({
       text: '42 is the answer.',
       model: 'gpt-4.1',
@@ -98,20 +115,26 @@ describe('BotActivityHandler', () => {
       .assertReply((activity) => expect(activity.type).toBe('typing'))
       .assertReply('42 is the answer.');
 
-    expect(generateReply).toHaveBeenCalledWith({
-      text: 'what is the answer?',
-      history: [],
-    });
-
-    expect(conversationLogging.logTurn).toHaveBeenCalledWith(
+    expect(conversationLogging.resolveUserAndConversation).toHaveBeenCalled();
+    expect(conversationLogging.logUserMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        userMessage: 'what is the answer?',
-        assistantMessage: '42 is the answer.',
-        model: 'gpt-4.1',
-        status: 'success',
-        toolCalls: ['searchKnowledgeBase'],
+        conversationId: CONVERSATION_ID,
+        content: 'what is the answer?',
       }),
     );
+    expect(generateReply).toHaveBeenCalledTimes(1);
+    const [callArgs] = generateReply.mock.calls[0] as [
+      { text: string; history: unknown[]; loggingContext: unknown },
+    ];
+    expect(callArgs).toMatchObject({
+      text: 'what is the answer?',
+      history: [],
+      loggingContext: {
+        conversationId: CONVERSATION_ID,
+        userId: USER_ID,
+        userMessageId: USER_MESSAGE_ID,
+      },
+    });
   });
 
   it('carries prior turns as history on the next message', async () => {
@@ -136,25 +159,24 @@ describe('BotActivityHandler', () => {
       .assertReply(() => undefined)
       .assertReply('Follow-up answer.');
 
-    expect(generateReply).toHaveBeenLastCalledWith({
-      text: 'second question',
-      history: [
-        { role: 'user', content: 'first question' },
-        { role: 'assistant', content: 'Follow-up answer.' },
-      ],
-    });
+    expect(generateReply).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        text: 'second question',
+        history: [
+          { role: 'user', content: 'first question' },
+          { role: 'assistant', content: 'Follow-up answer.' },
+        ],
+      }),
+    );
   });
 
-  it('sends a fallback message and logs an error turn when generation fails', async () => {
+  it('sends a fallback message when generation fails (the error llmCalls row is logged inside generateTextLogged, not here)', async () => {
     const generateReply = jest
       .fn()
       .mockRejectedValue(new Error('LLM unavailable'));
     const logger = buildLogger();
     const generationService = { generateReply } as unknown as GenerationService;
-    const { testAdapter, conversationLogging } = buildHandlerAndAdapter(
-      generationService,
-      logger,
-    );
+    const { testAdapter } = buildHandlerAndAdapter(generationService, logger);
 
     await testAdapter
       .send('hello')
@@ -164,13 +186,61 @@ describe('BotActivityHandler', () => {
       );
 
     expect(logger.error).toHaveBeenCalled();
-    expect(conversationLogging.logTurn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userMessage: 'hello',
-        status: 'error',
-        errorMessage: 'LLM unavailable',
-      }),
+  });
+
+  it('skips TeamsInfo.getMember for a user with an already-enriched profile', async () => {
+    const getMemberSpy = jest.spyOn(TeamsInfo, 'getMember');
+    const generateReply = jest.fn().mockResolvedValue({
+      text: 'ok',
+      model: 'gpt-4.1',
+      usage: {},
+      toolCalls: [],
+      latencyMs: 10,
+    });
+    const generationService = { generateReply } as unknown as GenerationService;
+    const { testAdapter } = buildHandlerAndAdapter(
+      generationService,
+      buildLogger(),
     );
+
+    await testAdapter
+      .send('hello')
+      .assertReply(() => undefined)
+      .assertReply('ok');
+
+    expect(getMemberSpy).not.toHaveBeenCalled();
+    getMemberSpy.mockRestore();
+  });
+
+  it('continues the turn normally when TeamsInfo.getMember fails for a not-yet-enriched user', async () => {
+    const getMemberSpy = jest
+      .spyOn(TeamsInfo, 'getMember')
+      .mockRejectedValue(new Error('not available in this channel'));
+    const generateReply = jest.fn().mockResolvedValue({
+      text: 'ok',
+      model: 'gpt-4.1',
+      usage: {},
+      toolCalls: [],
+      latencyMs: 10,
+    });
+    const generationService = { generateReply } as unknown as GenerationService;
+    const logger = buildLogger();
+    const conversationLogging = buildConversationLogging();
+    conversationLogging.hasEnrichedProfile.mockResolvedValue(false);
+    const { testAdapter } = buildHandlerAndAdapter(
+      generationService,
+      logger,
+      conversationLogging,
+    );
+
+    await testAdapter
+      .send('hello')
+      .assertReply(() => undefined)
+      .assertReply('ok');
+
+    expect(getMemberSpy).toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalled();
+    getMemberSpy.mockRestore();
   });
 
   it('greets new members without calling the generation service', async () => {

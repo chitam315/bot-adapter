@@ -7,6 +7,8 @@ import {
   StatePropertyAccessor,
   Storage,
   TeamsActivityHandler,
+  TeamsChannelData,
+  TeamsInfo,
   TurnContext,
 } from 'botbuilder';
 import { PinoLogger } from 'nestjs-pino';
@@ -21,7 +23,6 @@ import {
   BOT_ADAPTER,
   BOT_STORAGE,
   HISTORY_STATE_KEY,
-  LlmCallStatus,
   MAX_HISTORY_TURNS,
   TYPING_INDICATOR_INTERVAL_MS,
 } from '../constants';
@@ -116,31 +117,43 @@ export class BotActivityHandler extends TeamsActivityHandler {
     const history = await this.historyProperty.get(context, []);
     const { activity } = context;
 
+    // Resolved eagerly, before generating a reply — doesn't slow down the
+    // webhook ACK (this whole flow already runs in the background, see the
+    // comment on handleMessage above) and gives generateTextLogged real ids
+    // to link its llmCalls row to in one shot, instead of the old
+    // fire-and-forget-after-the-reply logTurn timing.
+    const userInput = await this.toTeamsUserInput(context, activity);
+    const conversationInput = this.toTeamsConversationInput(activity);
+    const { userId, conversationId } =
+      await this.conversationLoggingService.resolveUserAndConversation(
+        userInput,
+        conversationInput,
+      );
+    const userMessageId = await this.conversationLoggingService.logUserMessage({
+      conversationId,
+      activityId: activity.id,
+      content: userText,
+    });
+
     let result: Awaited<ReturnType<GenerationService['generateReply']>>;
     try {
-      // TEMP: artificial delay to manually verify the ACK-fast + proactive
-      // reply fix on Emulator — remove before deploying.
       result = await this.withTypingIndicator(context, () =>
         this.generationService.generateReply({
           text: userText,
           history,
+          loggingContext: {
+            conversationId,
+            userId,
+            userMessageId,
+            activityId: activity.id,
+          },
         }),
       );
     } catch (error) {
+      // The error llmCalls row is already written inside
+      // GenerationService.generateReply -> generateTextLogged — this catch
+      // only needs to handle the user-facing fallback.
       this.logger.error({ err: error as Error }, 'Failed to generate a reply');
-
-      // Fire-and-forget: logTurn never throws (see
-      // ConversationLoggingService), and the fallback reply below has
-      // already been decided regardless of whether this write succeeds.
-      void this.conversationLoggingService.logTurn({
-        user: this.toTeamsUserInput(activity),
-        conversation: this.toTeamsConversationInput(activity),
-        activityId: activity.id,
-        userMessage: userText,
-        model: this.config.azureOpenAi.defaultChatModel,
-        status: LlmCallStatus.Error,
-        errorMessage: (error as Error).message,
-      });
 
       await context.sendActivity({
         type: ActivityTypes.Message,
@@ -163,36 +176,77 @@ export class BotActivityHandler extends TeamsActivityHandler {
       type: ActivityTypes.Message,
       text: result.text,
     });
-
-    // Fire-and-forget, after the reply is already on its way to the user —
-    // a slow or failing DB write here must never delay or affect the turn.
-    void this.conversationLoggingService.logTurn({
-      user: this.toTeamsUserInput(activity),
-      conversation: this.toTeamsConversationInput(activity),
-      activityId: activity.id,
-      userMessage: userText,
-      model: result.model,
-      latencyMs: result.latencyMs,
-      toolCalls: result.toolCalls,
-      status: LlmCallStatus.Success,
-      assistantMessage: result.text,
-      usage: result.usage,
-    });
   }
 
-  private toTeamsUserInput(activity: Activity): TeamsUserInput {
-    return {
+  /**
+   * Builds the base TeamsUserInput from the activity, then merges in a
+   * richer Teams profile (email/givenName/surname/UPN) the first time this
+   * Teams identity is seen — see enrichTeamsProfile.
+   */
+  private async toTeamsUserInput(
+    context: TurnContext,
+    activity: Activity,
+  ): Promise<TeamsUserInput> {
+    const base: TeamsUserInput = {
       teamsUserId: activity.from.id,
       aadObjectId: activity.from.aadObjectId,
       tenantId: activity.conversation.tenantId,
       name: activity.from.name,
     };
+
+    const enrichment = await this.enrichTeamsProfile(context, base.teamsUserId);
+    return { ...base, ...enrichment };
+  }
+
+  /**
+   * Fetches email/givenName/surname/userPrincipalName via
+   * TeamsInfo.getMember — but only the first time this Teams identity is
+   * seen (checked via ConversationLoggingService.hasEnrichedProfile), to
+   * avoid a Bot Framework Connector API round-trip on every single turn.
+   * Never blocks or fails the turn: TeamsInfo.getMember has nothing real to
+   * resolve against the Bot Framework Emulator (no tenant), and can fail
+   * even against real Teams (permissions, throttling) — either way this
+   * just logs a warning and the turn proceeds without the extra fields.
+   */
+  private async enrichTeamsProfile(
+    context: TurnContext,
+    teamsUserId: string,
+  ): Promise<Partial<TeamsUserInput>> {
+    const alreadyEnriched =
+      await this.conversationLoggingService.hasEnrichedProfile(teamsUserId);
+    if (alreadyEnriched) {
+      return {};
+    }
+
+    try {
+      const member = await TeamsInfo.getMember(context, teamsUserId);
+      return {
+        email: member.email,
+        givenName: member.givenName,
+        surname: member.surname,
+        userPrincipalName: member.userPrincipalName,
+      };
+    } catch (error) {
+      this.logger.warn(
+        { err: error as Error },
+        'TeamsInfo.getMember failed — continuing without an enriched profile',
+      );
+      return {};
+    }
   }
 
   private toTeamsConversationInput(activity: Activity): TeamsConversationInput {
+    const channelData = activity.channelData as TeamsChannelData | undefined;
+
     return {
       channelConversationId: activity.conversation.id,
       channelId: activity.channelId,
+      conversationType: activity.conversation.conversationType,
+      isGroup: activity.conversation.isGroup,
+      locale: activity.locale,
+      teamId: channelData?.team?.id,
+      teamName: channelData?.team?.name,
+      channelName: channelData?.channel?.name,
     };
   }
 

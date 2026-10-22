@@ -1,14 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { generateText } from 'ai';
 import { AzureOpenAiProvider } from '../azure-openai/azure-openai.provider';
 import { AppConfigService } from '../config/config.service';
-import { AzureChatModel, KNOWLEDGE_BASE_TOOL } from '../constants';
+import { ConversationLoggingService } from '../conversation-logging/conversation-logging.service';
+import {
+  AzureChatModel,
+  CHAT_REPLY_PURPOSE,
+  KNOWLEDGE_BASE_TOOL,
+} from '../constants';
 import { GenerationService } from './generation.service';
-
-// 'ai' is auto-mocked project-wide via __mocks__/ai.ts (see that file for why).
 
 describe('GenerationService', () => {
   let service: GenerationService;
+  let generateTextLogged: jest.Mock;
   const chatModel = { id: 'chat-deployment' };
   const knowledgeBaseTool = { description: 'search', inputSchema: {} };
   const config = {
@@ -16,6 +19,8 @@ describe('GenerationService', () => {
   } as unknown as AppConfigService;
 
   beforeEach(async () => {
+    generateTextLogged = jest.fn();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GenerationService,
@@ -24,6 +29,10 @@ describe('GenerationService', () => {
           useValue: { chatModel: () => chatModel },
         },
         { provide: AppConfigService, useValue: config },
+        {
+          provide: ConversationLoggingService,
+          useValue: { generateTextLogged },
+        },
         { provide: KNOWLEDGE_BASE_TOOL, useValue: knowledgeBaseTool },
       ],
     }).compile();
@@ -35,8 +44,8 @@ describe('GenerationService', () => {
     expect(service).toBeDefined();
   });
 
-  it('calls generateText with the configured model, tool, and conversation history', async () => {
-    jest.mocked(generateText).mockResolvedValue({
+  it('calls generateTextLogged with the configured model, tool, conversation history, and logging context', async () => {
+    generateTextLogged.mockResolvedValue({
       text: 'The answer is 42.',
       usage: {
         inputTokens: 10,
@@ -46,7 +55,7 @@ describe('GenerationService', () => {
         totalTokens: 15,
       },
       toolCalls: [],
-    } as never);
+    });
 
     const reply = await service.generateReply({
       text: 'What is the answer?',
@@ -54,6 +63,7 @@ describe('GenerationService', () => {
         { role: 'user', content: 'Hi' },
         { role: 'assistant', content: 'Hello!' },
       ],
+      loggingContext: { conversationId: 'conversation-1' },
     });
 
     expect(reply).toEqual(
@@ -71,8 +81,10 @@ describe('GenerationService', () => {
       }),
     );
     expect(typeof reply.latencyMs).toBe('number');
-    expect(generateText).toHaveBeenCalledWith(
+    expect(generateTextLogged).toHaveBeenCalledWith(
       expect.objectContaining({
+        modelKey: AzureChatModel.Gpt41,
+        purposes: [CHAT_REPLY_PURPOSE],
         model: chatModel,
         tools: { searchKnowledgeBase: knowledgeBaseTool },
         messages: [
@@ -81,30 +93,32 @@ describe('GenerationService', () => {
           { role: 'user', content: 'What is the answer?' },
         ],
       }),
+      { conversationId: 'conversation-1' },
     );
   });
 
-  it('works with no prior history', async () => {
-    jest.mocked(generateText).mockResolvedValue({
+  it('works with no prior history and no logging context', async () => {
+    generateTextLogged.mockResolvedValue({
       text: 'Hello there.',
       usage: {},
       toolCalls: [],
-    } as never);
+    });
 
     const reply = await service.generateReply({ text: 'Hi' });
 
     expect(reply.text).toBe('Hello there.');
-    expect(generateText).toHaveBeenCalledWith(
+    expect(generateTextLogged).toHaveBeenCalledWith(
       expect.objectContaining({ messages: [{ role: 'user', content: 'Hi' }] }),
+      {},
     );
   });
 
   it('reports the resolved tool call names', async () => {
-    jest.mocked(generateText).mockResolvedValue({
+    generateTextLogged.mockResolvedValue({
       text: 'Found it.',
       usage: {},
       toolCalls: [{ toolName: 'searchKnowledgeBase' }],
-    } as never);
+    });
 
     const reply = await service.generateReply({ text: 'search for it' });
 
@@ -112,11 +126,11 @@ describe('GenerationService', () => {
   });
 
   it('resolves an explicit model over the configured default', async () => {
-    jest.mocked(generateText).mockResolvedValue({
+    generateTextLogged.mockResolvedValue({
       text: 'ok',
       usage: {},
       toolCalls: [],
-    } as never);
+    });
 
     const reply = await service.generateReply({
       text: 'Hi',

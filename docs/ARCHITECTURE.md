@@ -13,7 +13,10 @@ The short version: a change to one feature touches one folder, not four
 parallel `controllers/`/`services/`/`dtos/` trees.
 
 If you're new to this repo, read this document once end to end — it's the
-map for everything below.
+map for everything below. For how this app's Azure resources (Bot Service,
+the App Registration, Azure OpenAI, Azure Database for PostgreSQL) fit
+together and authenticate with each other, see
+[AZURE_ARCHITECTURE.md](AZURE_ARCHITECTURE.md).
 
 ## 1. Module map
 
